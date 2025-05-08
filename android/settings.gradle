@@ -1,0 +1,37 @@
+// --- Ensure this import is the very first line ---
+import java.util.Properties
+// -----------------------------------------------
+
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        def localPropertiesFile = file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { properties.load(it) }
+        }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null, "flutter.sdk not set in local.properties. Please ensure you have run 'flutter doctor' and that this file exists."
+        return flutterSdkPath
+    }()
+
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal() // Required for plugin resolution
+    }
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    // Use Literal Strings for Versions Here
+    id "com.android.application" version '8.4.1' apply false // Use the actual version string
+    id "org.jetbrains.kotlin.android" version '2.0.0' apply false // Use the actual version string
+}
+
+include ':app' // Include your app module
+
+// --- REMOVED THIS LINE ---
+// apply from: "$flutterSdkPath/packages/flutter_tools/gradle/app_plugin_loader.gradle"
+// --- Flutter plugin loader is handled by the plugins {} block above now ---

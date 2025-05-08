@@ -1,0 +1,47 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    // Define versions in ext block for easy management
+    ext {
+        // Assuming Kotlin 2.0.0 is stable and compatible by April 2025
+        kotlin_version = '2.0.0'
+        // Assuming AGP 8.4.1 is a stable version compatible with AS 2024.3.x
+        agp_version = '8.4.1'
+    }
+
+    // Repositories for buildscript dependencies (plugins)
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    // Dependencies required for the build process itself
+    dependencies {
+        classpath "com.android.tools.build:gradle:$agp_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // NOTE: Flutter Gradle Plugin is typically managed via settings.gradle now
+    }
+}
+
+// Repositories for all projects (library dependencies)
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Standard task to clean the build directory
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+// Standard configuration for build directory locations
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+// Ensure the app project is evaluated first if needed by other subprojects
+subprojects {
+    project.evaluationDependsOn(':app')
+}

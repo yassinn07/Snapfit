@@ -1,0 +1,2 @@
+D:/snapfit_v1/snapfit_v1/android/app/.cxx/Debug/qz1n5p4l/x86_64/CMakeFiles/edit_cache.dir
+D:/snapfit_v1/snapfit_v1/android/app/.cxx/Debug/qz1n5p4l/x86_64/CMakeFiles/rebuild_cache.dir

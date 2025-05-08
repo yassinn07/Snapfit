@@ -1,0 +1,91 @@
+// Top-level plugin declarations
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+// Android specific configurations
+android {
+    namespace = "com.example.snapfit" // TODO: Replace with your actual namespace
+    compileSdk = 35
+
+    // --- Set Specific NDK Version as Required by Plugins ---
+    ndkVersion = "26.1.10909125"
+    // ------------------------------------------------------
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+        // coreLibraryDesugaringEnabled = true // Enable if needed
+    }
+
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId = "com.example.snapfit" // TODO: Replace with your unique application ID
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug // TODO: Change to signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+            // Note: signingConfig signingConfigs.debug is implicitly used for debug type
+        }
+    }
+
+    // Signing configurations
+    signingConfigs {
+        debug {
+            // Use System property for home dir, more robust path finding
+            storeFile file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        // release {
+        //     // TODO: Configure release signing securely
+        // }
+    }
+
+    // packagingOptions { ... }
+}
+
+// Flutter specific configurations
+flutter {
+    source = "../.."
+}
+
+// Dependencies block
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    // coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4' // Add if coreLibraryDesugaringEnabled=true
+    // Other dependencies...
+    // Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0' // Use the latest version
+    // Gson Converter (or Moshi, Jackson) for JSON parsing
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0' // Use the same version as Retrofit
+
+    // OkHttp Logging Interceptor (optional, but very helpful for debugging)
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3' // Use a recent version
+
+    // Coroutines for asynchronous calls (if using Kotlin)
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' // Use the latest version
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
+}
