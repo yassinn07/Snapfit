@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'sign_up.dart'; // Import the sign-up screen
 
 class LandingScreen extends StatelessWidget {
+  const LandingScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,7 +36,7 @@ class LandingScreen extends StatelessWidget {
           Positioned(
             top: 494,
             left: MediaQuery.of(context).size.width * 0.5 - 194,
-            child: SizedBox(
+            child: const SizedBox(
               width: 388,
               child: Text(
                 'Meet your AI Stylist & Local fashion destination',
@@ -58,9 +60,9 @@ class LandingScreen extends StatelessWidget {
               height: 54,
               child: ElevatedButton.icon(
                 icon: Image.asset('assets/google.png', width: 24, height: 24),
-                label: Text("Continue with Google"),
+                label: const Text("Continue with Google"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF3F3F3),
+                  backgroundColor: const Color(0xFFF3F3F3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -80,10 +82,10 @@ class LandingScreen extends StatelessWidget {
               width: 353,
               height: 54,
               child: ElevatedButton.icon(
-                icon: Icon(Icons.email, color: Colors.black), // Email icon
-                label: Text("Continue with Email"),
+                icon: const Icon(Icons.email, color: Colors.black), // Email icon
+                label: const Text("Continue with Email"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF3F3F3),
+                  backgroundColor: const Color(0xFFF3F3F3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -91,7 +93,7 @@ class LandingScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SignUpScreen()), // Navigate
+                    MaterialPageRoute(builder: (context) => const SignUpScreen()), // Navigate
                   );
                 },
               ),

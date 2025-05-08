@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'landing_screen.dart';
 void main() {
-  runApp(MaterialApp(
+  runApp(const MaterialApp(
     home: LandingScreen(),
   ));
 }

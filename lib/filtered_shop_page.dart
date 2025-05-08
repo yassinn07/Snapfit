@@ -1,7 +1,6 @@
 // lib/filtered_shop_page.dart
 
 import 'package:flutter/material.dart';
-import 'item_screen.dart'; // Import the new item screen
 
 // Define FilterType if not in a separate file
 enum FilterType { category, brand }
@@ -11,17 +10,17 @@ enum FilterType { category, brand }
 class ShopItem {
   final String id;
   final String name;
-  final String description; // Added description field
+  final String description;
   final String category; // e.g., "Bag", "Top", "Jacket"
   final String brand;    // e.g., "Dodici", "STPS Streetwear"
   final String price;    // e.g., "750 EGP"
   final String? imageUrl;
-  bool isFavorite; // Make it non-final to allow toggling
+  bool isFavorite;
 
   ShopItem({
     required this.id,
     required this.name,
-    this.description = "", // Default empty description
+    this.description = "", // Often combined with name in display
     required this.category,
     required this.brand,
     required this.price,
@@ -49,16 +48,16 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
 
   // --- Placeholder Item Data ---
   // TODO: Replace with actual data fetching logic based on widget.filterType and widget.filterTitle
-  // Made _allItems non-final to allow modification of isFavorite
   final List<ShopItem> _allItems = [
-    ShopItem(id: 'item1', name: 'Elegant white bag', description: "A stylish white bag perfect for evening events.", category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item2', name: 'Cool Jacket', description: "Streetwear style jacket with a modern fit.", category: 'Jacket', brand: 'STPS Streetwear', price: '1200 EGP', isFavorite: true, imageUrl: null),
-    ShopItem(id: 'item3', name: 'Comfy Tee', description: "Soft cotton t-shirt for everyday wear.", category: 'Top', brand: 'Dodici', price: '400 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item4', name: 'Stylish Sneakers', description: "Comfortable and fashionable sneakers.", category: 'Shoes', brand: 'Ravello', price: '950 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item5', name: 'Black Trousers', description: "Classic black trousers, versatile for many occasions.", category: 'Pants', brand: 'STPS Streetwear', price: '800 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item6', name: 'Evening Dress', description: "Elegant dress for formal gatherings.", category: 'Dress', brand: 'Hasnaa Designs', price: '2500 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item7', name: 'Elegant Green bag', description: "A unique green bag to make a statement.", category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
-    ShopItem(id: 'item8', name: 'Elegant dark bag', description: "A sophisticated dark-colored bag.", category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item1', name: 'Elegant white bag', category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item2', name: 'Cool Jacket', category: 'Jacket', brand: 'STPS Streetwear', price: '1200 EGP', isFavorite: true, imageUrl: null),
+    ShopItem(id: 'item3', name: 'Comfy Tee', category: 'Top', brand: 'Dodici', price: '400 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item4', name: 'Stylish Sneakers', category: 'Shoes', brand: 'Ravello', price: '950 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item5', name: 'Black Trousers', category: 'Pants', brand: 'STPS Streetwear', price: '800 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item6', name: 'Evening Dress', category: 'Dress', brand: 'Hasnaa Designs', price: '2500 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item7', name: 'Elegant Green bag', category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
+    ShopItem(id: 'item8', name: 'Elegant dark bag', category: 'Bag', brand: 'Dodici', price: '750 EGP', isFavorite: false, imageUrl: null),
+
   ];
   // --- End Placeholder Data ---
 
@@ -84,7 +83,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
           _filteredItems = _allItems.where((item) =>
           item.category.toLowerCase() == 'jacket' ||
               item.category.toLowerCase() == 'top' ||
-              item.category.toLowerCase() == 'pants' || // Added pants
               item.category.toLowerCase() == 'dress' // Add other clothing types
           ).toList();
         }
@@ -102,25 +100,21 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     });
   }
 
-  // Updated _toggleFavorite to ensure both lists are potentially updated
   void _toggleFavorite(String itemId) {
     setState(() {
-      final globalIndex = _allItems.indexWhere((item) => item.id == itemId);
-      if (globalIndex != -1) {
-        final bool currentStatus = _allItems[globalIndex].isFavorite;
-        _allItems[globalIndex].isFavorite = !currentStatus;
-
-        // Update the item in the filtered list as well, if it exists there
+      final index = _allItems.indexWhere((item) => item.id == itemId);
+      if(index != -1) {
+        _allItems[index].isFavorite = !_allItems[index].isFavorite;
+        // Update filtered list if needed (or just rely on item state)
         final filteredIndex = _filteredItems.indexWhere((item) => item.id == itemId);
-        if (filteredIndex != -1) {
-          _filteredItems[filteredIndex].isFavorite = !currentStatus;
+        if(filteredIndex != -1) {
+          _filteredItems[filteredIndex].isFavorite = _allItems[index].isFavorite;
         }
       }
     });
     // TODO: Persist favorite change to database/backend
     print("Toggled favorite for item $itemId");
   }
-
 
   void _checkAiMatch(String itemId) {
     // TODO: Implement AI Match check logic
@@ -136,28 +130,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Add to Bag needed for Item $itemId')),
     );
-  }
-
-  // *** ADDED: Navigation Function ***
-  void _navigateToItemDetail(ShopItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ItemScreen(item: item),
-      ),
-    ).then((_) {
-      // This .then() block executes when returning from ItemScreen
-      // We call setState to refresh the filtered list in case the
-      // favorite status was changed on the detail screen.
-      // NOTE: This relies on the ItemScreen modifying the `isFavorite`
-      //       property of the ShopItem object it received.
-      //       A more robust solution uses state management (Provider, Riverpod).
-      setState(() {
-        // Re-filter or just rebuild to reflect potential changes
-        // For simplicity, just triggering a rebuild here.
-        // If using proper state management, this might not be needed.
-      });
-    });
   }
 
 
@@ -209,18 +181,13 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
               itemCount: _filteredItems.length,
               itemBuilder: (context, index) {
                 final item = _filteredItems[index];
-                // *** UPDATED: Wrap card in InkWell for navigation ***
-                return InkWell(
-                  onTap: () => _navigateToItemDetail(item),
-                  child: _buildShopItemCard( // The card itself
-                    context: context,
-                    item: item,
-                    fontFamily: defaultFontFamily,
-                    // Pass button callbacks directly
-                    onFavoriteTap: () => _toggleFavorite(item.id),
-                    onAiTap: () => _checkAiMatch(item.id),
-                    onBagTap: () => _addToBag(item.id),
-                  ),
+                return _buildShopItemCard(
+                  context: context,
+                  item: item,
+                  fontFamily: defaultFontFamily,
+                  onFavoriteTap: () => _toggleFavorite(item.id),
+                  onAiTap: () => _checkAiMatch(item.id),
+                  onBagTap: () => _addToBag(item.id),
                 );
               },
             ),
@@ -295,7 +262,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
   }
 
   // Builds a card for a single shop item in the grid
-  // Now accepts callbacks for the overlay buttons
   Widget _buildShopItemCard({
     required BuildContext context,
     required ShopItem item,
@@ -304,7 +270,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     VoidCallback? onAiTap,
     VoidCallback? onBagTap})
   {
-    // No InkWell needed here anymore, it's handled in the GridView.builder
     return Column( // Column for Card + Text below
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -334,21 +299,21 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                     child: _buildItemOverlayButton(
                         icon: item.isFavorite ? Icons.favorite : Icons.favorite_border,
                         iconColor: item.isFavorite ? Colors.red : Colors.black.withOpacity(0.7),
-                        onTap: onFavoriteTap // Use passed callback
+                        onTap: onFavoriteTap
                     )
                 ),
                 // AI Match Button (Top-Right)
                 Positioned(top: 8, right: 8,
                     child: _buildItemOverlayButton(
                         icon: Icons.smart_toy_outlined, // Placeholder for AI check/hanger icon
-                        onTap: onAiTap // Use passed callback
+                        onTap: onAiTap
                     )
                 ),
                 // Add To Bag Button (Bottom-Right)
                 Positioned(bottom: 8, right: 8,
                     child: _buildItemOverlayButton(
                         icon: Icons.shopping_bag_outlined, // Placeholder for hanger/bag icon
-                        onTap: onBagTap // Use passed callback
+                        onTap: onBagTap
                     )
                 ),
               ],
@@ -387,7 +352,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
   }
 
   // Helper for the small circular overlay buttons on item cards
-  // (Keep this helper function as it's used by _buildShopItemCard)
   Widget _buildItemOverlayButton({required IconData icon, Color? iconColor, VoidCallback? onTap}) {
     return Material(
       color: Colors.white, // CSS background: #FFFFFF;
@@ -395,7 +359,7 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
       elevation: 1.0, // Add shadow
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: onTap, // Use the provided onTap callback
+        onTap: onTap,
         child: Container(
           width: 33, height: 33, // CSS size: 33px
           decoration: const BoxDecoration(shape: BoxShape.circle),

@@ -1,188 +1,294 @@
 import 'package:flutter/material.dart';
-import 'sign_up.dart'; // Import the SignUpScreen
-import 'home_screen.dart'; // Import the HomeScreen
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'sign_up.dart';
+import 'home_screen.dart';
+import 'config.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    // Validate inputs
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter both email and password'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final url = Uri.parse('${Config.baseUrl}/login');
+
+    try {
+      final response = await http.post(
+        url,
+        body: {
+          'username': _emailController.text.trim(),
+          'password': _passwordController.text.trim(),
+        },
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        // Successful login
+        final accessToken = responseData['access_token'];
+        final tokenType = responseData['token_type'];
+
+        // Navigate to home screen with the token
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(token: accessToken),
+          ),
+        );
+      } else {
+        // Handle error
+        String errorMessage = 'Login failed';
+        if (responseData.containsKey('detail')) {
+          errorMessage = responseData['detail'];
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ensuring white background
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Logo
-            Image.asset(
-              'assets/logo_small.png',
-              width: 80,
-              height: 80,
-            ),
-
-            SizedBox(height: 20),
-
-            // Login Title
-            Text(
-              "Log in",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.02,
-                color: Colors.black,
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Logo
+              Image.asset(
+                'assets/logo_small.png',
+                width: 80,
+                height: 80,
               ),
-            ),
 
-            SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-            // Email Input
-            TextField(
-              decoration: InputDecoration(
-                labelText: "Your email",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-            ),
-
-            SizedBox(height: 15),
-
-            // Password Input
-            TextField(
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-
-            SizedBox(height: 10),
-
-            // Forgot Password
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  // Handle forgot password action
-                },
-                child: Text(
-                  "Forgot password?",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 14,
-                  ),
+              // Login Title
+              const Text(
+                "Log in",
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.02,
+                  color: Colors.black,
                 ),
               ),
-            ),
 
-            SizedBox(height: 20),
+              const SizedBox(height: 10),
 
-            // Login Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomeScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              // Email Input
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: "Your email",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
                 ),
-                child: Text(
-                  "Log in",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+
+              const SizedBox(height: 15),
+
+              // Password Input
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Password",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
                 ),
               ),
-            ),
 
-            SizedBox(height: 30),
+              const SizedBox(height: 10),
 
-            // OR Login With
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(child: Divider(color: Colors.grey)),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    "Or Login with",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-                Expanded(child: Divider(color: Colors.grey)),
-              ],
-            ),
-
-            SizedBox(height: 20),
-
-            // Google Login Button (Wide)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle Google login
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // White background for Google button
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.black), // Border to make it visible
-                  ),
-                  elevation: 3, // Light shadow for effect
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/google.png', // Google logo
-                      width: 24,
-                      height: 24,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            SizedBox(height: 40),
-
-            // Sign Up
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Don't have an account?"),
-                TextButton(
+              // Forgot Password
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignUpScreen()),
-                    );
+                    // Handle forgot password action
                   },
-                  child: Text(
-                    "Sign up",
+                  child: const Text(
+                    "Forgot password?",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
                       color: Colors.black,
+                      fontSize: 14,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Login Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : const Text(
+                    "Log in",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // OR Login With
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(child: Divider(color: Colors.grey)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      "Or Login with",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey)),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Google Login Button (Wide)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Handle Google login
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: Colors.black),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/google.png',
+                        width: 24,
+                        height: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Google',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // Sign Up
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account?"),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "Sign up",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

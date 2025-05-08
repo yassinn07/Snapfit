@@ -13,7 +13,9 @@ import 'package:image_picker/image_picker.dart'; // <<< Import image_picker
 // ----- Main Navigation Screen -----
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String token; // ✅ Add this
+
+  const HomeScreen({super.key, required this.token}); // ✅ Update constructor
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
