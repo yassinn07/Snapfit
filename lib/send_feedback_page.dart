@@ -1,9 +1,15 @@
 // lib/send_feedback_page.dart
 
 import 'package:flutter/material.dart';
+import 'services/profile_service.dart';
 
 class SendFeedbackPage extends StatefulWidget {
-  const SendFeedbackPage({super.key});
+  final String token;
+  
+  const SendFeedbackPage({
+    required this.token,
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<SendFeedbackPage> createState() => _SendFeedbackPageState();
@@ -11,7 +17,7 @@ class SendFeedbackPage extends StatefulWidget {
 
 class _SendFeedbackPageState extends State<SendFeedbackPage> {
   final _feedbackController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -19,27 +25,61 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
     super.dispose();
   }
 
-  void _submitFeedback() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement feedback submission logic (e.g., API call)
-      print('Feedback submitted: ${_feedbackController.text}');
-
+  Future<void> _submitFeedback() async {
+    final String feedback = _feedbackController.text.trim();
+    
+    if (feedback.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thank you for your feedback!')),
+        const SnackBar(content: Text('Please enter your feedback'))
       );
-      // Optionally clear the field and navigate back
-      _feedbackController.clear();
-      Navigator.pop(context);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final profileService = ProfileService(token: widget.token);
+      final success = await profileService.sendFeedback(feedback);
+      
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (success) {
+          // Return to previous screen with success flag
+          Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to send feedback'))
+          );
+        }
+      }
+    } catch (e) {
+      print('Error sending feedback: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error sending feedback'))
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
-
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
@@ -55,86 +95,86 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 17.0, vertical: 24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "We appreciate your feedback! Let us know how we can improve.",
-                style: TextStyle(
-                  fontFamily: defaultFontFamily,
-                  fontSize: 16,
-                  color: Colors.black.withOpacity(0.8),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _feedbackController,
-                maxLines: 8, // Allow multiple lines for feedback
-                minLines: 5,
-                decoration: InputDecoration(
-                  hintText: "Enter your feedback here...",
-                  hintStyle: TextStyle(
-                    fontFamily: defaultFontFamily,
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF6F1EE).withOpacity(0.5), // Light background
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Colors.black),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-                ),
-                style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16, color: Colors.black),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your feedback before submitting.';
-                  }
-                  return null;
-                },
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _submitFeedback,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50), // Full width
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  "Submit Feedback",
+      body: _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  "We appreciate your feedback",
                   style: TextStyle(
                     fontFamily: defaultFontFamily,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w500,
+                    color: Colors.black,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  "Please share your thoughts, suggestions, or report any issues you've encountered.",
+                  style: TextStyle(
+                    fontFamily: defaultFontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F1EE).withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: TextField(
+                    controller: _feedbackController,
+                    maxLines: 10,
+                    style: const TextStyle(
+                      fontFamily: defaultFontFamily,
+                      fontSize: 16,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Enter your feedback here...",
+                      hintStyle: TextStyle(
+                        fontFamily: defaultFontFamily,
+                        fontSize: 16,
+                        color: Colors.grey.shade500,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitFeedback,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      "Submit Feedback",
+                      style: TextStyle(
+                        fontFamily: defaultFontFamily,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
     );
   }
 }

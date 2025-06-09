@@ -157,125 +157,43 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  // ... rest of your build method ...
-  // (The build method you provided seems fine, no changes needed there based on the error)
-  // Ensure all TextFields and DropdownButtonFormFields are within a Form widget
-  // and use GlobalKey<FormState>() for validation if you want more sophisticated
-  // per-field validation indication.
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: SingleChildScrollView( // Good for accommodating different screen sizes
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40), // Adjust spacing as needed
-              Align(
-                alignment: Alignment.topRight,
-                child: Image.asset(
-                  'assets/logo_small.png', // Ensure this asset exists in pubspec.yaml and the path is correct
-                  width: 80,
-                  height: 80,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                Center(
+                  child: Image.asset(
+                    'assets/logo_small.png',
+                    width: 80,
+                    height: 80,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                'Create Account',
-                style: TextStyle(
-                  fontSize: 32, // Slightly adjusted for typical screen density
-                  fontFamily: 'Archivo', // Ensure this font is included in pubspec.yaml
-                  letterSpacing: -0.02,
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 20),
+                const Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 32, // Slightly adjusted for typical screen density
+                    fontFamily: 'Archivo', // Ensure this font is included in pubspec.yaml
+                    letterSpacing: -0.02,
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 30),
-              // User Type Dropdown
-              const Text("I am a...", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _userType,
-                items: _userTypes.map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _userType = newValue;
-                    // Reset conditional fields if user type changes
-                    if (newValue == 'Consumer') {
-                      _descriptionController.clear();
-                    } else if (newValue == 'Brand') {
-                      _size = null;
-                      _gender = null;
-                    }
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: "Select user type",
-                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                validator: (value) => value == null ? 'Please select a user type' : null,
-              ),
-              const SizedBox(height: 20),
-              const Text("Username", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  hintText: "Choose a username",
-                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text("Email", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: "your.email@example.com",
-                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text("Password", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  hintText: "Create a strong password",
-                  hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Conditional fields based on user type
-              if (_userType == 'Consumer') ...[
-                const Text("Size", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                const SizedBox(height: 30),
+                // User Type Dropdown
+                const Text("I am a...", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _size,
-                  items: _sizes.map((String value) {
+                  value: _userType,
+                  items: _userTypes.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
                       child: Text(value),
@@ -283,52 +201,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   }).toList(),
                   onChanged: (newValue) {
                     setState(() {
-                      _size = newValue;
+                      _userType = newValue;
+                      // Reset conditional fields if user type changes
+                      if (newValue == 'Consumer') {
+                        _descriptionController.clear();
+                      } else if (newValue == 'Brand') {
+                        _size = null;
+                        _gender = null;
+                      }
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: "Select your clothing size",
+                    hintText: "Select user type",
                     hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     filled: true,
                     fillColor: Colors.grey[50],
                   ),
-                  validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your size' : null,
+                  validator: (value) => value == null ? 'Please select a user type' : null,
                 ),
                 const SizedBox(height: 20),
-                const Text("Gender", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _gender,
-                  items: _genders.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _gender = newValue;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Select your gender",
-                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                  validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your gender' : null,
-                ),
-                const SizedBox(height: 20),
-              ] else if (_userType == 'Brand') ...[
-                const Text("Brand Description", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                const Text("Username", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: _descriptionController,
-                  maxLines: 3,
+                  controller: _usernameController,
                   decoration: InputDecoration(
-                    hintText: "Tell us about your brand",
+                    hintText: "Choose a username",
                     hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     filled: true,
@@ -336,57 +234,154 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-              ],
+                const Text("Email", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: "your.email@example.com",
+                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text("Password", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: "Create a strong password",
+                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
-              const SizedBox(height: 30), // Increased spacing before button
-              Center(
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black, // Use backgroundColor for newer Flutter versions
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                // Conditional fields based on user type
+                if (_userType == 'Consumer') ...[
+                  const Text("Size", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _size,
+                    items: _sizes.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        _size = newValue;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Select your clothing size",
+                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
-                    onPressed: _signUp, // Assuming _isLoading is false or handled
-                    child: const Text(
-                      "Sign Up",
-                      style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+                    validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your size' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  const Text("Gender", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _gender,
+                    items: _genders.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        _gender = newValue;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Select your gender",
+                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your gender' : null,
+                  ),
+                  const SizedBox(height: 20),
+                ] else if (_userType == 'Brand') ...[
+                  const Text("Brand Description", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: "Tell us about your brand",
+                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                const SizedBox(height: 30), // Increased spacing before button
+                Center(
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black, // Use backgroundColor for newer Flutter versions
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _signUp, // Assuming _isLoading is false or handled
+                      child: const Text(
+                        "Sign Up",
+                        style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 40), // Adjusted spacing
-              Center(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement( // Use pushReplacement if you don't want to come back to signup
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  child: RichText(
-                    text: TextSpan(
-                      text: "Already have an account? ",
-                      style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.7)),
-                      children: const [
-                        TextSpan(
-                          text: "Log In",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                            color: Colors.black, // Make it stand out a bit more
+                const SizedBox(height: 40), // Adjusted spacing
+                Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement( // Use pushReplacement if you don't want to come back to signup
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    child: RichText(
+                      text: TextSpan(
+                        text: "Already have an account? ",
+                        style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.7)),
+                        children: const [
+                          TextSpan(
+                            text: "Log In",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                              color: Colors.black, // Make it stand out a bit more
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 40), // Bottom padding
-            ],
+                const SizedBox(height: 40), // Bottom padding
+              ],
+            ),
           ),
         ),
       ),

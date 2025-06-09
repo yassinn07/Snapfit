@@ -1,6 +1,7 @@
 // lib/change_preferences.dart
 
 import 'package:flutter/material.dart';
+import 'services/profile_service.dart';
 
 // Enum remains the same
 enum PreferenceType { fit, ageGroup, lifestyle, season, colors, exclusions }
@@ -15,7 +16,7 @@ class ChangePreferencesPage extends StatefulWidget {
   final List<String> initialExclusions;
   // Callback function for saving
   final Function(Map<String, dynamic>) onSave;
-
+  final String token;
 
   // Updated constructor
   const ChangePreferencesPage({
@@ -26,6 +27,7 @@ class ChangePreferencesPage extends StatefulWidget {
     required this.initialColors,
     required this.initialExclusions,
     required this.onSave, // Make callback required
+    required this.token,
     super.key,
   });
 
@@ -41,6 +43,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
   late String _selectedSeason;
   late List<String> _selectedColors;
   late List<String> _selectedExclusions;
+  bool _isLoading = false;
 
   // Options lists remain the same
   final List<String> _fitOptions = ["Slim", "Regular", "Loose", "Oversized"];
@@ -167,45 +170,45 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
   Future<void> _showMultiChoiceOptions(BuildContext context, PreferenceType type) async {
     String title = "";
     List<String> options = [];
-    List<String> currentSelectionCopy = []; // Use a copy for the modal
+    List<String> initialSelections = []; // Initial selections from state
 
     switch (type) {
       case PreferenceType.lifestyle:
         title = "Select Lifestyle";
         options = _lifestyleOptions;
-        currentSelectionCopy = List.from(_selectedLifestyle); // Use copy
+        initialSelections = List.from(_selectedLifestyle);
         break;
       case PreferenceType.colors:
         title = "Select Preferred Colors";
         options = _colorOptions;
-        currentSelectionCopy = List.from(_selectedColors); // Use copy
+        initialSelections = List.from(_selectedColors);
         break;
       case PreferenceType.exclusions:
         title = "Select Excluded Categories";
         options = _categoryExclusionOptions;
-        currentSelectionCopy = List.from(_selectedExclusions); // Use copy
+        initialSelections = List.from(_selectedExclusions);
         break;
       default:
         return; // Should not happen
     }
 
+    // Create a list to track selection state that can be modified in the modal
+    List<String> tempSelection = List.from(initialSelections);
+
     // Correctly call showModalBottomSheet with context and builder
     final List<String>? result = await showModalBottomSheet<List<String>>(
-      context: context, // Provide context
+      context: context,
       isScrollControlled: true, // Allow modal to take more height
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (BuildContext modalContext) { // Provide builder function
-        // Use StatefulWidget inside (via StatefulBuilder) to manage temporary checked state
+      builder: (BuildContext modalContext) {
+        // Use StatefulBuilder to manage state within the modal
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            // Temporary list to hold selections within the modal, initialized with the copy
-            List<String> tempSelection = List.from(currentSelectionCopy);
-
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), // Adjust for keyboard if needed later
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7), // Limit height
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -214,45 +217,62 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                     children: [
                       Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Archivo')),
                       const SizedBox(height: 15),
-                      Expanded( // Make the list scrollable
+                      Expanded(
                         child: ListView.builder(
                           shrinkWrap: true,
                           itemCount: options.length,
                           itemBuilder: (context, index) {
                             final option = options[index];
-                            final isSelected = tempSelection.contains(option);
                             return CheckboxListTile(
                               title: Text(option, style: const TextStyle(fontFamily: 'Archivo')),
-                              value: isSelected,
+                              value: tempSelection.contains(option),
                               onChanged: (bool? value) {
-                                // Use the modal's state setter for immediate UI update
+                                // Update the tempSelection list and rebuild modal
                                 setModalState(() {
-                                  if (value == true) {
+                                  if (value == true && !tempSelection.contains(option)) {
                                     tempSelection.add(option);
-                                  } else {
+                                  } else if (value == false && tempSelection.contains(option)) {
                                     tempSelection.remove(option);
                                   }
                                 });
                               },
-                              activeColor: const Color(0xFF8960C4), // Theme color
+                              activeColor: const Color(0xFF8960C4),
+                              checkColor: Colors.white,
+                              controlAffinity: ListTileControlAffinity.leading,
                             );
                           },
                         ),
                       ),
                       const SizedBox(height: 15),
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Pop and return the final selection from the modal
-                            Navigator.pop(modalContext, tempSelection);
-                          },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempSelection.clear();
+                              });
+                            },
+                            child: const Text("Clear All", 
+                              style: TextStyle(
+                                color: Colors.red, 
+                                fontFamily: 'Archivo'
+                              )
+                            ),
                           ),
-                          child: const Text("Done", style: TextStyle(fontFamily: 'Archivo')),
-                        ),
+                          ElevatedButton(
+                            onPressed: () {
+                              // Return the final selection
+                              Navigator.pop(modalContext, tempSelection);
+                            },
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12)
+                            ),
+                            child: const Text("Done", style: TextStyle(fontFamily: 'Archivo')),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
                     ],
@@ -264,7 +284,6 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
         );
       },
     );
-
 
     // Update actual state if a selection was made and returned
     if (result != null) {
@@ -288,29 +307,59 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
 
 
   // Save Preferences Method remains the same
-  void _savePreferences() {
-    // TODO: Add validation if needed before saving
+  void _savePreferences() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    // Create a map of the selected preferences
-    final Map<String, dynamic> updatedPreferences = {
-      'fit': _selectedFit,
-      'ageGroup': _selectedAgeGroup,
-      'lifestyle': _selectedLifestyle, // Pass the list directly
-      'season': _selectedSeason,
-      'colors': _selectedColors,
-      'exclusions': _selectedExclusions,
-    };
-
-    // Call the callback function passed from HomeScreen via ProfilePage
-    widget.onSave(updatedPreferences);
-
-    // Show feedback
-    if (mounted) { // Check if the widget is still in the tree
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preferences Saved!')),
+    try {
+      // Call the API to save preferences
+      final profileService = ProfileService(token: widget.token);
+      final updatedProfile = await profileService.updatePreferences(
+        fitPreference: _selectedFit,
+        lifestylePreferences: _selectedLifestyle,
+        seasonPreference: _selectedSeason,
+        ageGroup: _selectedAgeGroup,
+        preferredColors: _selectedColors,
+        excludedCategories: _selectedExclusions,
       );
-      // Pop the screen
-      Navigator.pop(context);
+
+      // Create a map of the updated preferences
+      final Map<String, dynamic> updatedPreferences = {
+        'fit': updatedProfile.fitPreference,
+        'ageGroup': updatedProfile.ageGroup,
+        'lifestyle': updatedProfile.lifestylePreferences,
+        'season': updatedProfile.seasonPreference,
+        'colors': updatedProfile.preferredColors,
+        'exclusions': updatedProfile.excludedCategories,
+      };
+
+      // Call the callback function passed from HomeScreen via ProfilePage
+      widget.onSave(updatedPreferences);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Show feedback
+      if (mounted) { // Check if the widget is still in the tree
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preferences Saved!')),
+        );
+        // Return true to indicate preferences were updated
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      print('Error saving preferences: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error saving preferences'))
+        );
+      }
     }
   }
 
@@ -334,37 +383,39 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 19.0, vertical: 20.0),
-        child: Column(
-          children: [
-            _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: defaultFontFamily),
-            const SizedBox(height: 15),
-            _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: defaultFontFamily),
-            const SizedBox(height: 15),
-            _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: defaultFontFamily),
-            const SizedBox(height: 15),
-            _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: defaultFontFamily),
-            const SizedBox(height: 15),
-            _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: defaultFontFamily),
-            const SizedBox(height: 15),
-            _buildPreferenceEditRow(title: "I want to exclude", currentValue: _selectedExclusions.isEmpty ? "Select categories you don’t want" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: defaultFontFamily),
-            const SizedBox(height: 40),
-            ElevatedButton(
-                onPressed: _savePreferences,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    padding: const EdgeInsets.symmetric(vertical: 12)
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 19.0, vertical: 20.0),
+            child: Column(
+              children: [
+                _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: defaultFontFamily),
+                const SizedBox(height: 15),
+                _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: defaultFontFamily),
+                const SizedBox(height: 15),
+                _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: defaultFontFamily),
+                const SizedBox(height: 15),
+                _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: defaultFontFamily),
+                const SizedBox(height: 15),
+                _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: defaultFontFamily),
+                const SizedBox(height: 15),
+                _buildPreferenceEditRow(title: "I want to exclude", currentValue: _selectedExclusions.isEmpty ? "Select categories you don't want" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: defaultFontFamily),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                    onPressed: _savePreferences,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        padding: const EdgeInsets.symmetric(vertical: 12)
+                    ),
+                    child: const Text("Save Preferences", style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16, fontWeight: FontWeight.w500))
                 ),
-                child: const Text("Save Preferences", style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16, fontWeight: FontWeight.w500))
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 

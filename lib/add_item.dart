@@ -3,188 +3,510 @@
 import 'package:flutter/material.dart';
 // Import the image_picker package
 import 'package:image_picker/image_picker.dart';
-// import 'dart:io'; // Import 'dart:io' if you need to use File() for previews
+import 'dart:io'; // Import 'dart:io' if you need to use File() for previews
+import 'services/closet_service.dart'; // Import closet service
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'services/profile_service.dart'; // Import profile service
 
-class AddItemPage extends StatelessWidget {
-  // *** FIX: Remove the non-constant instance field ***
-  // final ImagePicker picker = ImagePicker(); // REMOVED THIS LINE
+class AddItemPage extends StatefulWidget {
+  final String token;
+  const AddItemPage({required this.token, super.key});
 
-  // Ensure the constructor remains const
-  const AddItemPage({super.key});
+  @override
+  State<AddItemPage> createState() => _AddItemPageState();
+}
 
-  // --- Action Handlers ---
+class _AddItemPageState extends State<AddItemPage> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _colorController = TextEditingController();
+  final TextEditingController _sizeController = TextEditingController();
+  final TextEditingController _occasionController = TextEditingController();
+  final TextEditingController _brandController = TextEditingController();
+  String? _category;
+  String? _subcategory;
+  File? _imageFile;
+  bool _isLoading = false;
+  bool _showImagePreview = false;
+  bool _isClassifying = false;
+  String? _userGender;
 
-  // Picks an image from the gallery
-  Future<void> _onChoosePhotoTap(BuildContext context) async {
-    // *** FIX: Create local picker instance here ***
-    final ImagePicker picker = ImagePicker();
-    print("Choose Photo Tapped - Opening gallery...");
+  final List<String> _categories = ['Upper Body', 'Lower Body', 'Shoes'];
+  final Map<String, List<String>> _subcategories = {
+    'Upper Body': ['Jackets', 'Shirts', 'Sweaters', 'Tops', 'Tshirts'],
+    'Lower Body': ['Jeans', 'Shorts', 'Skirts', 'Track Pants', 'Trousers'],
+    'Shoes': ['Casual - Formal Shoes', 'Sandals', 'Sports Shoes'],
+  };
+  final List<String> _sizes = ['S', 'M', 'L', 'XL'];
+  final List<String> _occasionOptions = ['Casual', 'Formal', 'Sports'];
+  String? _occasion;
+
+  // --- Adjusted Theme-related Fields ---
+  static const Color mainRed = Color(0xFFD55F5F);
+  static const Color bgColor = Color(0xFFF6F1EE);
+  static const String fontFamily = 'Archivo';
+  static const OutlineInputBorder themedBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(14)), // BorderRadius.circular is const
+    borderSide: BorderSide(color: mainRed, width: 1.2),   // BorderSide can be const
+  );
+  // --- End of Adjustments ---
+
+  // Add a step variable to control the flow
+  int _step = 0; // 0: image, 1: category, 2: details
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserGender();
+  }
+
+  Future<void> _fetchUserGender() async {
     try {
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-      if (image != null) {
-        print('Image picked from gallery: ${image.path}');
-        // Use mounted check if context is used across async gap
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image Selected: ${image.name}')),
-        );
-        // TODO: Process picked image
-      } else {
-        print('No image selected from gallery.');
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No image selected.')),
-        );
-      }
+      final profileService = ProfileService(token: widget.token);
+      final profile = await profileService.getUserProfile();
+      setState(() {
+        _userGender = profile.gender;
+      });
     } catch (e) {
-      print('Error picking image from gallery: $e');
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error selecting image: $e')),
-      );
+      print('Failed to fetch user gender: $e');
+      setState(() {
+        _userGender = null;
+      });
     }
   }
 
-  // Takes a photo using the camera
-  Future<void> _onTakePhotoTap(BuildContext context) async {
-    // *** FIX: Create local picker instance here ***
-    final ImagePicker picker = ImagePicker();
-    print("Take New Photo Tapped - Opening camera...");
-    try {
-      final XFile? photo = await picker.pickImage(source: ImageSource.camera);
-
-      if (photo != null) {
-        print('Photo taken: ${photo.path}');
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Photo Taken: ${photo.name}')),
-        );
-        // TODO: Process taken photo
-      } else {
-        print('No photo taken.');
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No photo taken.')),
-        );
-      }
-    } catch (e) {
-      print('Error taking photo: $e');
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error using camera: $e')),
-      );
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        _showImagePreview = true;
+      });
     }
   }
 
-  // --- Build Method ---
+  void _cancelImagePreview() {
+    setState(() {
+      _imageFile = null;
+      _showImagePreview = false;
+    });
+  }
+
+  void _continueAfterPreview() {
+    setState(() {
+      _showImagePreview = false;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _imageFile == null || _category == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields and select an image.')));
+      return;
+    }
+    setState(() { _isLoading = true; });
+    final closetService = ClosetService(token: widget.token);
+    final success = await closetService.addItemFull(
+      name: _nameController.text,
+      category: _category!,
+      subcategory: _subcategory ?? '',
+      color: _colorController.text,
+      size: _sizeController.text,
+      occasion: _occasion ?? '',
+      brand: _brandController.text,
+      gender: _userGender ?? '',
+      imagePath: _imageFile!.path,
+    );
+    setState(() { _isLoading = false; });
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item added successfully!')));
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
+    }
+  }
+
+  Future<void> _classifyTopwear() async {
+    if (_imageFile == null) return;
+    setState(() { _isClassifying = true; });
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-topwear'));
+      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        var respStr = await response.stream.bytesToString();
+        var data = jsonDecode(respStr);
+        setState(() {
+          _subcategory = data['topwear'];
+          final occasion = data['occasion'];
+          if (_occasionOptions.contains(occasion)) {
+            _occasion = occasion;
+          } else {
+            _occasion = null;
+          }
+          _occasionController.text = _occasion ?? '';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() { _isClassifying = false; });
+    }
+  }
+
+  Future<void> _classifyBottomwear() async {
+    if (_imageFile == null) return;
+    setState(() { _isClassifying = true; });
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-bottomwear'));
+      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        var respStr = await response.stream.bytesToString();
+        var data = jsonDecode(respStr);
+        setState(() {
+          _subcategory = data['bottomwear'];
+          final occasion = data['occasion'];
+          if (_occasionOptions.contains(occasion)) {
+            _occasion = occasion;
+          } else {
+            _occasion = null;
+          }
+          _occasionController.text = _occasion ?? '';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() { _isClassifying = false; });
+    }
+  }
+
+  Future<void> _classifyShoes() async {
+    if (_imageFile == null) return;
+    setState(() { _isClassifying = true; });
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-shoes'));
+      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        var respStr = await response.stream.bytesToString();
+        var data = jsonDecode(respStr);
+        setState(() {
+          _subcategory = data['shoes'];
+          final occasion = data['occasion'];
+          if (_occasionOptions.contains(occasion)) {
+            _occasion = occasion;
+          } else {
+            _occasion = null;
+          }
+          _occasionController.text = _occasion ?? '';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() { _isClassifying = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    const String defaultFontFamily = 'Archivo'; // Ensure font is set up
-
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          "Add new item",
-          style: TextStyle(fontFamily: defaultFontFamily, fontSize: 25, fontWeight: FontWeight.w500, color: Colors.black, letterSpacing: -0.02 * 25),
-        ),
+        title: const Text('Add new item', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: fontFamily, color: Colors.black)),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: bgColor,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text( // Search via description Title
-              "Search via description",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: defaultFontFamily, fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02 * 17),
-            ),
-            const SizedBox(height: 15),
-            TextField( // Search Input Field
-              style: const TextStyle(fontFamily: defaultFontFamily, fontSize: 15, fontWeight: FontWeight.w300, color: Color.fromRGBO(0, 0, 0, 0.65), letterSpacing: -0.02 * 15),
-              decoration: InputDecoration(
-                hintText: "STPS BLACK CREWNECK", // Placeholder
-                hintStyle: const TextStyle(fontFamily: defaultFontFamily, fontSize: 15, fontWeight: FontWeight.w300, color: Color.fromRGBO(0, 0, 0, 0.65), letterSpacing: -0.02 * 15),
-                prefixIcon: const Padding(padding: EdgeInsets.only(left: 13.0, right: 10.0), child: Icon(Icons.search, size: 21, color: Colors.black54)),
-                filled: true, fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide.none),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.0)),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const Text( // "Or using photo" Title
-              "Or using photo",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02 * 16),
-            ),
-            const SizedBox(height: 15),
-            Row( // Photo Option Buttons Row
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildPhotoOptionCard( // Choose Photo Button
-                  context: context, label: "Choose photo", icon: Icons.photo_library_outlined, backgroundColor: const Color(0xFFFFEFE5),
-                  onTap: () => _onChoosePhotoTap(context), // Calls gallery function
-                  fontFamily: defaultFontFamily,
-                ),
-                const SizedBox(width: 28), // Spacing
-                _buildPhotoOptionCard( // Take Photo Button
-                  context: context, label: "Take New", icon: Icons.camera_alt_outlined, backgroundColor: const Color(0xFFFFDFE0),
-                  onTap: () => _onTakePhotoTap(context), // Calls camera function
-                  fontFamily: defaultFontFamily,
-                ),
-              ],
-            ),
-            const SizedBox(height: 30), // Bottom Padding
-          ],
+      backgroundColor: bgColor,
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
+            child: _buildStepContent(),
+          ),
         ),
       ),
     );
   }
 
-  // Helper widget for the photo option cards (remains the same)
-  Widget _buildPhotoOptionCard({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required Color backgroundColor,
-    required VoidCallback onTap,
-    required String fontFamily,
-  }) {
-    return InkWell(
-      onTap: onTap, // This makes the card tappable
-      borderRadius: BorderRadius.circular(5.0),
-      child: Container(
-        width: 176, height: 94,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDFDFD),
-          borderRadius: BorderRadius.circular(5.0),
-          boxShadow: [ BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 4)) ],
-        ),
+  Widget _buildStepContent() {
+    if (_step == 0) {
+      // Step 1: Image selection
+      return Padding(
+        padding: const EdgeInsets.only(top: 8.0, left: 0, right: 0, bottom: 0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container( // Circular Icon Background
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
-              child: Icon(icon, size: 25, color: Colors.black87),
+            Container(
+              height: 500,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey[300]!, width: 1),
+              ),
+              child: _imageFile == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.camera_alt, size: 60, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('Take a photo of your item', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                      ],
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: 500),
+                    ),
             ),
-            const SizedBox(height: 8),
-            Text( // Label Text
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02 * 17),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt, color: Colors.white),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainRed,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library, color: Colors.white),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (_imageFile != null) ...[
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => setState(() => _step = 1),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainRed,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                  minimumSize: const Size(180, 48),
+                ),
+                child: const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
+              ),
+            ],
           ],
+        ),
+      );
+    } else if (_step == 1) {
+      // Step 2: Category selection
+      return Padding(
+        padding: const EdgeInsets.only(top: 16.0, left: 0, right: 0, bottom: 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Select Category', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
+            const SizedBox(height: 24),
+            ..._categories.map((cat) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+              child: ElevatedButton(
+                onPressed: () async {
+                  setState(() {
+                    _selectedCategory = cat;
+                    _category = cat;
+                    _step = 2;
+                  });
+                  // Call the ML model for autofill
+                  if (_imageFile != null) {
+                    if (cat == 'Upper Body') {
+                      await _classifyTopwear();
+                    } else if (cat == 'Lower Body') {
+                      await _classifyBottomwear();
+                    } else if (cat == 'Shoes') {
+                      await _classifyShoes();
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainRed,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  minimumSize: const Size(double.infinity, 56),
+                ),
+                child: Text(cat, style: const TextStyle(fontSize: 18, fontFamily: fontFamily)),
+              ),
+            )),
+          ],
+        ),
+      );
+    } else {
+      // Step 3: Details form (category already chosen)
+      return Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: _buildDetailsForm(),
+      );
+    }
+  }
+
+  Widget _buildDetailsForm() {
+    return Card(
+      elevation: 4,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 28.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                style: const TextStyle(fontFamily: fontFamily),
+                decoration: const InputDecoration(
+                  labelText: 'Name/Description',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+                validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
+              ),
+              const SizedBox(height: 18),
+              DropdownButtonFormField<String>(
+                value: _subcategory,
+                items: (_selectedCategory != null ? (_subcategories[_selectedCategory] ?? <String>[]) : <String>[])
+                    .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
+                        value: sub,
+                        child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
+                    ))
+                    .toList(),
+                onChanged: (val) => setState(() => _subcategory = val),
+                decoration: const InputDecoration(
+                  labelText: 'Subcategory',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+                validator: (value) => value == null ? 'Please select a subcategory' : null,
+                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                dropdownColor: Colors.white,
+                iconEnabledColor: mainRed,
+              ),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _colorController,
+                style: const TextStyle(fontFamily: fontFamily),
+                decoration: const InputDecoration(
+                  labelText: 'Color',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+                validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
+              ),
+              const SizedBox(height: 18),
+              DropdownButtonFormField<String>(
+                value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
+                items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _sizeController.text = val ?? '';
+                  });
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Size',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+                validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
+                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                dropdownColor: Colors.white,
+                iconEnabledColor: mainRed,
+              ),
+              const SizedBox(height: 18),
+              DropdownButtonFormField<String>(
+                value: _occasionOptions.contains(_occasion) ? _occasion : null,
+                items: _occasionOptions
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _occasion = val;
+                    _occasionController.text = val ?? '';
+                  });
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Occasion',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+                validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
+                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                dropdownColor: Colors.white,
+                iconEnabledColor: mainRed,
+              ),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _brandController,
+                style: const TextStyle(fontFamily: fontFamily),
+                decoration: const InputDecoration(
+                  labelText: 'Brand',
+                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                  border: themedBorder,
+                  focusedBorder: themedBorder,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainRed,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 48),
+                      minimumSize: const Size(180, 56),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Add Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

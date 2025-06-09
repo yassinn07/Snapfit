@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'landing_screen.dart';
+import 'splash_screen.dart';
+
 void main() {
   runApp(const MaterialApp(
-    home: LandingScreen(),
+    home: SplashScreen(),
+    debugShowCheckedModeBanner: false,
   ));
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

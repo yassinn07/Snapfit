@@ -2,6 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'filtered_shop_page.dart'; // Import to use ShopItem model and potentially helper widgets
+import 'services/shop_service.dart'; // Import ShopService for fetching items
+import 'package:url_launcher/url_launcher.dart';
+import 'services/ml_outfit_service.dart'; // Import ML outfit service
+import 'services/profile_service.dart'; // Import ProfileService for favorite management
 
 // Placeholder for related item data model (can be the same as ShopItem)
 // TODO: Replace with your actual data structure if different
@@ -9,78 +13,171 @@ typedef RelatedItem = ShopItem;
 
 class ItemScreen extends StatefulWidget {
   final ShopItem item;
+  final String? token;
+  final void Function(bool isFavorite)? onFavoriteChanged;
 
-  const ItemScreen({required this.item, super.key});
+  const ItemScreen({required this.item, this.token, this.onFavoriteChanged, super.key});
 
   @override
   State<ItemScreen> createState() => _ItemScreenState();
 }
 
 class _ItemScreenState extends State<ItemScreen> {
-  late bool _isFavorite; // Local state for favorite status on this screen
-
-  // --- Placeholder Related Item Data ---
-  // TODO: Fetch actual related items based on widget.item
-  final List<RelatedItem> _relatedItems = [
-    ShopItem(id: 'related1', name: 'Matching Pants', category: 'Pants', brand: 'Dodici', price: '600 EGP', imageUrl: null),
-    ShopItem(id: 'related2', name: 'Complementary Scarf', category: 'Accessory', brand: 'Style Co', price: '300 EGP', imageUrl: null),
-    ShopItem(id: 'related3', name: 'Similar Style Top', category: 'Top', brand: 'STPS Streetwear', price: '450 EGP', imageUrl: null),
-    ShopItem(id: 'related4', name: 'Goes With Shoes', category: 'Shoes', brand: 'Ravello', price: '900 EGP', imageUrl: null),
-  ];
-  // --- End Placeholder Data ---
-
+  late bool _isFavorite;
+  List<ShopItem> _relatedItems = [];
+  bool _isLoadingRelated = true;
+  bool _isGeneratingOutfits = false;
+  List<ShopItem> _generatedOutfits = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize local favorite state from the passed item
     _isFavorite = widget.item.isFavorite;
+    _fetchRelatedItems();
   }
 
-  void _toggleFavorite() {
+  Future<void> _fetchRelatedItems() async {
+    setState(() { _isLoadingRelated = true; });
+    try {
+      // Fetch related items from the backend (e.g., same category, exclude current item)
+      final shopService = ShopService(token: null); // Use token if needed
+      final allItems = await shopService.getShopItems();
+      setState(() {
+        _relatedItems = allItems
+          .where((item) => item.category == widget.item.category && item.id != widget.item.id)
+          .toList();
+        _isLoadingRelated = false;
+      });
+    } catch (e) {
+      setState(() { _isLoadingRelated = false; });
+    }
+  }
+
+  void _toggleFavorite() async {
+    if (widget.token == null || widget.token!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to favorite items.')),
+      );
+      return;
+    }
+    final profileService = ProfileService(token: widget.token!);
+    final newFavoriteState = !_isFavorite;
     setState(() {
-      _isFavorite = !_isFavorite;
-      // TODO: IMPORTANT - Update the original item's state in the previous screen's list
-      // This often requires passing a callback function back or using a state management solution (Provider, Riverpod, Bloc)
-      // For now, we just update the local state and print
-      widget.item.isFavorite = _isFavorite; // Update the passed item directly (might not reflect back)
-      print("Toggled favorite for item ${widget.item.id} to $_isFavorite");
-      // TODO: Persist favorite change to database/backend
+      _isFavorite = newFavoriteState;
+      widget.item.isFavorite = newFavoriteState;
     });
+    bool success = false;
+    try {
+      success = await profileService.toggleFavorite(widget.item.id);
+      if (!success && mounted) {
+        setState(() {
+          _isFavorite = !newFavoriteState;
+          widget.item.isFavorite = !newFavoriteState;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorite status')),
+        );
+      } else {
+        // Notify parent/shop screen if callback is provided
+        if (widget.onFavoriteChanged != null) {
+          widget.onFavoriteChanged!(_isFavorite);
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isFavorite = !newFavoriteState;
+        widget.item.isFavorite = !newFavoriteState;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error updating favorite status')),
+      );
+    }
   }
 
-  void _checkAiMatch() {
-    // TODO: Implement AI Match check logic for the current item
-    print("Check AI Match tapped for item ${widget.item.id}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('AI Match Check needed for Item ${widget.item.name}')),
-    );
+  void _generateOutfits() async {
+    setState(() {
+      _isGeneratingOutfits = true;
+    });
+    final mlService = MLOutfitService(token: null); // Use token if needed
+    try {
+      final outfits = await mlService.generateOutfitsForItem(widget.item);
+      setState(() {
+        _generatedOutfits = outfits;
+        _isGeneratingOutfits = false;
+      });
+      if (outfits.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Outfit Generation'),
+            content: const Text('No outfits could be generated for this item.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Generated Outfits', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 220,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: outfits.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final outfit = outfits[index];
+                      return _buildRelatedItemCard(context, outfit, 'Archivo');
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isGeneratingOutfits = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating outfits: $e')),
+      );
+    }
   }
 
-  void _generateOutfits() {
-    // TODO: Implement Generate Outfits logic
-    print("Generate Outfits tapped for item ${widget.item.id}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Generate Outfits needed for Item ${widget.item.name}')),
-    );
+  void _visitStore() async {
+    // Open the purchase link URL if available
+    if (widget.item.purchaseLink != null && widget.item.purchaseLink!.isNotEmpty) {
+      final Uri url = Uri.parse(widget.item.purchaseLink!);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open store URL: ${widget.item.purchaseLink}')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No store link available for this item')),
+      );
+    }
   }
-
-  void _addToBag() {
-    // TODO: Implement Add to Bag logic for the current item
-    print("Add to Bag tapped for item ${widget.item.id}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Add to Bag needed for Item ${widget.item.name}')),
-    );
-  }
-
-  void _viewAiMatches() {
-    // TODO: Implement View AI Matches navigation/logic
-    print("View AI Matches tapped for item ${widget.item.id}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Navigate to AI Matches for ${widget.item.name}')),
-    );
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +214,28 @@ class _ItemScreenState extends State<ItemScreen> {
               // --- Main Item Image Area (CSS: Rectangle 113) ---
               _buildImageArea(context, widget.item, defaultFontFamily),
 
+              // --- 3D Model Placeholder ---
+              // TODO: Integrate your ML-powered 3D model viewer widget here when the model is deployed.
+              // For example: ThreeDModelViewer(item: widget.item)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[400]!, width: 1),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '3D Model Preview Here (ML model integration point)',
+                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 20), // Spacing below image area
 
               // --- Item Details & Generate Button Row ---
@@ -124,19 +243,41 @@ class _ItemScreenState extends State<ItemScreen> {
 
               const SizedBox(height: 25), // Spacing (approx top: 361px for AI card)
 
-              // --- AI Match Info Card (CSS: Rectangle 99) ---
-              _buildAiMatchCard(context, defaultFontFamily),
+              // --- AI Match Info Card removed ---
+
+              // --- Related Items Section ---
+              const SizedBox(height: 30),
+              Text(
+                "How to style it",
+                style: TextStyle(fontFamily: defaultFontFamily, fontSize: 18, fontWeight: FontWeight.w500, color: Colors.black),
+              ),
+              const SizedBox(height: 12),
+              _isLoadingRelated
+                  ? const Center(child: CircularProgressIndicator())
+                  : _relatedItems.isEmpty
+                      ? const Text("No related items found.")
+                      : SizedBox(
+                          height: 220,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _relatedItems.length,
+                            separatorBuilder: (context, index) => const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final related = _relatedItems[index];
+                              return _buildRelatedItemCard(context, related, defaultFontFamily);
+                            },
+                          ),
+                        ),
 
               const SizedBox(height: 20), // Spacing (approx top: 448px for Add to Bag)
 
-              // --- Add to Bag Button (CSS: Button / primary) ---
-              _buildAddToBagButton(context),
+              // --- Visit Store Button (formerly Add to Bag) ---
+              _buildVisitStoreButton(context),
 
               const SizedBox(height: 40), // Spacing (approx top: 527px for How to Style)
 
               // --- How to Style It Section ---
-              _buildStylingSection(context, defaultFontFamily),
-
+              // (Removed redundant section)
               const SizedBox(height: 20), // Bottom padding
 
             ],
@@ -164,8 +305,9 @@ class _ItemScreenState extends State<ItemScreen> {
               borderRadius: BorderRadius.circular(10),
               // TODO: Replace placeholder with actual Image widget (CSS: image-removebg-preview (26) 2)
               child: item.imageUrl != null
-                  ? Center(child: Text("Img for ${item.id}", style: const TextStyle(color: Colors.grey)))
-              //? Image.network(item.imageUrl!, fit: BoxFit.contain, errorBuilder: ...) // Use contain to see full item
+                  ? Image.network(item.imageUrl!, fit: BoxFit.contain, 
+                    errorBuilder: (context, error, stackTrace) => 
+                      const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)))
                   : const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)),
             ),
           ),
@@ -180,26 +322,30 @@ class _ItemScreenState extends State<ItemScreen> {
               onTap: _toggleFavorite,
             ),
           ),
-          // AI Match/Check Button (Top-Right - CSS: Ellipse 121, image 129 - hanger/AI icon?)
+          // Generate Outfits Button (Top-Right - replaces AI Match/Check Button)
           Positioned(
             top: 8, // Approx from CSS top: 139px vs Rect top: 132px
             right: 8, // Approx from CSS left: 345px vs Rect left: 35px + width 354px
             child: _buildItemOverlayButton(
-              // Using smart_toy as a placeholder for AI check (CSS showed 'image 129')
-              icon: Icons.smart_toy_outlined, // Placeholder icon
-              onTap: _checkAiMatch,
+              icon: Icons.view_in_ar, // 3D cube icon for 3D modeling
+              onTap: () {
+                // TODO: Integrate ML-powered 3D model viewer here when ready
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('3D Model'),
+                    content: const Text('3D model coming soon!'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
-          // Add To Bag Button (Bottom-Right - Not directly on image in CSS, but common pattern)
-          // Let's keep it consistent with the grid view card for now, ignore CSS `hanger (1) 14` position here
-          // Positioned(
-          //   bottom: 8,
-          //   right: 8,
-          //   child: _buildItemOverlayButton(
-          //     icon: Icons.shopping_bag_outlined,
-          //     onTap: _addToBag, // Note: Main button below does this now
-          //   ),
-          // ),
         ],
       ),
     );
@@ -248,26 +394,29 @@ class _ItemScreenState extends State<ItemScreen> {
 
         // Generate Outfits Button (CSS: Rectangle 84, text, image 130)
         InkWell(
-          onTap: _generateOutfits,
-          borderRadius: BorderRadius.circular(20), // For splash effect
+          onTap: _isGeneratingOutfits ? null : _generateOutfits,
+          borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFC4BFE2), // CSS background
-              borderRadius: BorderRadius.circular(20), // CSS border-radius
+              color: const Color(0xFFC4BFE2),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min, // Fit content
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // CSS: Text "Generate Outfits"
+                _isGeneratingOutfits
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome_outlined, size: 18, color: Colors.black),
+                const SizedBox(width: 6),
                 Text(
-                  "Generate Outfits",
+                  _isGeneratingOutfits ? "Generating..." : "Generate Outfits",
                   style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 14, color: Colors.black),
                 ),
-                const SizedBox(width: 6),
-                // CSS: image 130 (placeholder icon)
-                // TODO: Replace with actual asset if available
-                const Icon(Icons.auto_awesome_outlined, size: 18, color: Colors.black),
               ],
             ),
           ),
@@ -275,7 +424,6 @@ class _ItemScreenState extends State<ItemScreen> {
       ],
     );
   }
-
 
   // Builds the card showing AI match information
   Widget _buildAiMatchCard(BuildContext context, String fontFamily) {
@@ -313,7 +461,7 @@ class _ItemScreenState extends State<ItemScreen> {
 
           // Right Button (CSS: Rectangle 100, View text, right-arrow)
           InkWell(
-            onTap: _viewAiMatches,
+            onTap: _generateOutfits,
             borderRadius: BorderRadius.circular(15), // Match container border radius
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjust padding
@@ -344,13 +492,13 @@ class _ItemScreenState extends State<ItemScreen> {
     );
   }
 
-  // Builds the main Add to Bag button
-  Widget _buildAddToBagButton(BuildContext context) {
+  // Builds the Visit Store button (formerly Add to Bag)
+  Widget _buildVisitStoreButton(BuildContext context) {
     return SizedBox(
       width: double.infinity, // Make button expand horizontally (CSS width: 353px approx full width)
       height: 56, // CSS height: 56px
       child: ElevatedButton(
-        onPressed: _addToBag,
+        onPressed: _visitStore,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.black, // CSS background: #000000
           foregroundColor: Colors.white, // Text color
@@ -364,7 +512,7 @@ class _ItemScreenState extends State<ItemScreen> {
             // lineHeight: 1.25, // Flutter uses height multiplier
           ),
         ),
-        child: const Text("Add to Bag"),
+        child: const Text("Visit Store"),
       ),
     );
   }
@@ -401,7 +549,6 @@ class _ItemScreenState extends State<ItemScreen> {
 
         // Style Chips/Buttons (CSS: Rectangles 108-111, text, icons)
         _buildStyleChips(context, fontFamily),
-
       ],
     );
   }
@@ -431,7 +578,9 @@ class _ItemScreenState extends State<ItemScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: item.imageUrl != null
-                          ? Center(child: Text("Img ${item.id}", style: const TextStyle(color: Colors.grey)))
+                          ? Image.network(item.imageUrl!, fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => 
+                              const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
                           : const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)),
                     ),
                   ),

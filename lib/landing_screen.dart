@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sign_up.dart'; // Import the sign-up screen
+import 'log_in.dart'; // Import the login screen
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -51,32 +52,9 @@ class LandingScreen extends StatelessWidget {
             ),
           ),
 
-          // Continue with Google Button
+          // Continue with Email Button (Navigates to LoginScreen)
           Positioned(
-            top: 668,
-            left: 37,
-            child: SizedBox(
-              width: 353,
-              height: 54,
-              child: ElevatedButton.icon(
-                icon: Image.asset('assets/google.png', width: 24, height: 24),
-                label: const Text("Continue with Google"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F3F3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                onPressed: () {
-                  // Handle Google login
-                },
-              ),
-            ),
-          ),
-
-          // Continue with Email Button (Navigates to SignUpScreen)
-          Positioned(
-            top: 735,
+            top: 680,
             left: 37,
             child: SizedBox(
               width: 353,
@@ -93,7 +71,7 @@ class LandingScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SignUpScreen()), // Navigate
+                    MaterialPageRoute(builder: (context) => const LoginScreen()), // Navigate to login
                   );
                 },
               ),

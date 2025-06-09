@@ -16,4 +16,16 @@ class Config {
       return 'http://192.168.1.13:8000';  // Replace with your actual IP
     }
   }
+
+  // Base API URL for the backend services
+  static String get apiUrl => baseUrl; // Backend routes are defined at root level
+  
+  // Maximum number of items to display in lists
+  static const int maxListItems = 50;
+  
+  // Default timeout duration for API requests
+  static const int requestTimeoutSeconds = 10;
+  
+  // Image quality settings (0-100)
+  static const int imageUploadQuality = 85;
 }
