@@ -558,7 +558,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "${item.name} | ${item.brand}",
+                    "${item.name} | ${item.userName}",
                     style: TextStyle(
                       fontFamily: fontFamily,
                       fontSize: 16,

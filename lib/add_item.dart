@@ -228,12 +228,10 @@ class _AddItemPageState extends State<AddItemPage> {
         elevation: 0,
       ),
       backgroundColor: bgColor,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
-            child: _buildStepContent(),
-          ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 18.0, right: 18.0, top: 60.0, bottom: 0.0),
+          child: _buildStepContent(),
         ),
       ),
     );
@@ -320,184 +318,225 @@ class _AddItemPageState extends State<AddItemPage> {
         ),
       );
     } else if (_step == 1) {
-      // Step 2: Category selection
+      // Step 2: Category selection (modern card/pill style with icons)
       return Padding(
-        padding: const EdgeInsets.only(top: 16.0, left: 0, right: 0, bottom: 0),
+        padding: const EdgeInsets.only(top: 32.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Select Category', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
-            const SizedBox(height: 24),
-            ..._categories.map((cat) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
-              child: ElevatedButton(
-                onPressed: () async {
-                  setState(() {
-                    _selectedCategory = cat;
-                    _category = cat;
-                    _step = 2;
-                  });
-                  // Call the ML model for autofill
-                  if (_imageFile != null) {
-                    if (cat == 'Upper Body') {
-                      await _classifyTopwear();
-                    } else if (cat == 'Lower Body') {
-                      await _classifyBottomwear();
-                    } else if (cat == 'Shoes') {
-                      await _classifyShoes();
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: mainRed,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  minimumSize: const Size(double.infinity, 56),
+            const Text(
+              'Select Category',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: fontFamily),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'What type of item are you adding?',
+              style: TextStyle(fontSize: 16, color: Colors.black54, fontFamily: fontFamily),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ..._categories.map((cat) {
+              IconData icon;
+              switch (cat) {
+                case 'Upper Body': icon = Icons.checkroom; break;
+                case 'Lower Body': icon = Icons.shopping_bag; break;
+                case 'Shoes': icon = Icons.directions_run; break;
+                default: icon = Icons.category;
+              }
+              final isSelected = _category == cat;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 24.0),
+                child: Material(
+                  elevation: isSelected ? 4 : 1,
+                  borderRadius: BorderRadius.circular(16),
+                  color: isSelected ? mainRed : Colors.white,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () async {
+                      setState(() {
+                        _selectedCategory = cat;
+                        _category = cat;
+                        _step = 2;
+                      });
+                      // Call the ML model for autofill
+                      if (_imageFile != null) {
+                        if (cat == 'Upper Body') {
+                          await _classifyTopwear();
+                        } else if (cat == 'Lower Body') {
+                          await _classifyBottomwear();
+                        } else if (cat == 'Shoes') {
+                          await _classifyShoes();
+                        }
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 18),
+                      child: Row(
+                        children: [
+                          Icon(icon, color: isSelected ? Colors.white : mainRed, size: 28),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.white : Colors.black,
+                                fontFamily: fontFamily,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle, color: Colors.white, size: 22),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: Text(cat, style: const TextStyle(fontSize: 18, fontFamily: fontFamily)),
-              ),
-            )),
+              );
+            }).toList(),
           ],
         ),
       );
     } else {
-      // Step 3: Details form (category already chosen)
+      // Step 3: Details form (modern card with icons and divider)
       return Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: _buildDetailsForm(),
-      );
-    }
-  }
-
-  Widget _buildDetailsForm() {
-    return Card(
-      elevation: 4,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 28.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                style: const TextStyle(fontFamily: fontFamily),
-                decoration: const InputDecoration(
-                  labelText: 'Name/Description',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
-              ),
-              const SizedBox(height: 18),
-              DropdownButtonFormField<String>(
-                value: _subcategory,
-                items: (_selectedCategory != null ? (_subcategories[_selectedCategory] ?? <String>[]) : <String>[])
-                    .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
-                        value: sub,
-                        child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
-                    ))
-                    .toList(),
-                onChanged: (val) => setState(() => _subcategory = val),
-                decoration: const InputDecoration(
-                  labelText: 'Subcategory',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-                validator: (value) => value == null ? 'Please select a subcategory' : null,
-                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                dropdownColor: Colors.white,
-                iconEnabledColor: mainRed,
-              ),
-              const SizedBox(height: 18),
-              TextFormField(
-                controller: _colorController,
-                style: const TextStyle(fontFamily: fontFamily),
-                decoration: const InputDecoration(
-                  labelText: 'Color',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
-              ),
-              const SizedBox(height: 18),
-              DropdownButtonFormField<String>(
-                value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
-                items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _sizeController.text = val ?? '';
-                  });
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Size',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
-                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                dropdownColor: Colors.white,
-                iconEnabledColor: mainRed,
-              ),
-              const SizedBox(height: 18),
-              DropdownButtonFormField<String>(
-                value: _occasionOptions.contains(_occasion) ? _occasion : null,
-                items: _occasionOptions
-                    .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
-                        ))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _occasion = val;
-                    _occasionController.text = val ?? '';
-                  });
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Occasion',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
-                style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                dropdownColor: Colors.white,
-                iconEnabledColor: mainRed,
-              ),
-              const SizedBox(height: 18),
-              TextFormField(
-                controller: _brandController,
-                style: const TextStyle(fontFamily: fontFamily),
-                decoration: const InputDecoration(
-                  labelText: 'Brand',
-                  labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                  border: themedBorder,
-                  focusedBorder: themedBorder,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+        padding: const EdgeInsets.only(top: 32.0),
+        child: Card(
+          elevation: 6,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 32.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Text(
+                    'Item Details',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Divider(height: 32, thickness: 1.2),
+                  TextFormField(
+                    controller: _nameController,
+                    style: const TextStyle(fontFamily: fontFamily),
+                    decoration: const InputDecoration(
+                      labelText: 'Name/Description',
+                      prefixIcon: Icon(Icons.label_outline, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    value: _subcategory,
+                    items: (_selectedCategory != null ? (_subcategories[_selectedCategory] ?? <String>[]) : <String>[])
+                        .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
+                            value: sub,
+                            child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
+                        ))
+                        .toList(),
+                    onChanged: (val) => setState(() => _subcategory = val),
+                    decoration: const InputDecoration(
+                      labelText: 'Subcategory',
+                      prefixIcon: Icon(Icons.category_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null ? 'Please select a subcategory' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: _colorController,
+                    style: const TextStyle(fontFamily: fontFamily),
+                    decoration: const InputDecoration(
+                      labelText: 'Color',
+                      prefixIcon: Icon(Icons.color_lens_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
+                    items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _sizeController.text = val ?? '';
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Size',
+                      prefixIcon: Icon(Icons.straighten, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    value: _occasionOptions.contains(_occasion) ? _occasion : null,
+                    items: _occasionOptions
+                        .map((option) => DropdownMenuItem(
+                              value: option,
+                              child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _occasion = val;
+                        _occasionController.text = val ?? '';
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Occasion',
+                      prefixIcon: Icon(Icons.event_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: _brandController,
+                    style: const TextStyle(fontFamily: fontFamily),
+                    decoration: const InputDecoration(
+                      labelText: 'Brand',
+                      prefixIcon: Icon(Icons.store_mall_directory_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: mainRed,
                       foregroundColor: Colors.white,
-                      elevation: 2,
+                      elevation: 3,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 48),
-                      minimumSize: const Size(180, 56),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      minimumSize: const Size(double.infinity, 56),
                     ),
                     child: _isLoading
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -505,10 +544,10 @@ class _AddItemPageState extends State<AddItemPage> {
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

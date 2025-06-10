@@ -1,0 +1,7 @@
+{
+  "total_chunks": 242,
+  "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "vector_store": "SimpleVectorStore"
+}

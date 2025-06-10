@@ -17,6 +17,7 @@ import 'closet_item_widgets.dart'; // Import closet item widgets
 import 'log_in.dart'; // <-- Add this import at the top with other imports
 import 'all_category_items_page.dart'; // Import for AllCategoryItemsPage
 import 'services/brand_service.dart'; // Import brand service
+import 'ai_stylist_page.dart';
 
 // ----- Main Navigation Screen -----
 
@@ -182,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       MyShopPage(token: widget.token),
-      const AIStylistPage(),
+      AIStylistPage(),
       const ClosetPage(),
       ProfilePage(
         userInitial: _userInitial,
@@ -767,6 +768,19 @@ class _MyShopPageState extends State<MyShopPage> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite_border, color: Colors.black, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LikedItemsScreen(token: widget.token),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -921,216 +935,8 @@ class _MyShopPageState extends State<MyShopPage> {
 }
 
 // --- AIStylistPage ---
-// Updated implementation based on CSS
-class AIStylistPage extends StatefulWidget {
-  const AIStylistPage({super.key});
-
-  @override
-  State<AIStylistPage> createState() => _AIStylistPageState();
-}
-
-class _AIStylistPageState extends State<AIStylistPage> {
-  bool _isLoading = false; // State to control loading screen visibility
-  final ImagePicker _picker = ImagePicker(); // Initialize image picker
-
-  // --- Updated Function to Use AI Stylist Camera Screen ---
-  Future<void> _processImageFromCamera() async {
-    // Get the token from HomeScreenState
-    final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
-    if (homeScreenState != null) {
-      // Navigate to our new camera screen with token
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AIStylistCameraScreen(token: homeScreenState.widget.token),
-        ),
-      );
-    }
-  }
-
-  // --- Functions for Action Buttons ---
-  void _getAdviceOnItem() {
-    // Get the token from HomeScreenState
-    final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
-    if (homeScreenState != null) {
-      // Navigate to our AI Stylist camera screen with token
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AIStylistCameraScreen(token: homeScreenState.widget.token),
-        ),
-      );
-    }
-  }
-
-  void _suggestClothing() {
-    // TODO: Implement navigation or action for suggesting clothing
-    print("Suggest Clothing tapped");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Suggest Clothing - Not Implemented')),
-    );
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    const String defaultFontFamily = 'Archivo';
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF9),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(context, defaultFontFamily),
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingView(defaultFontFamily)
-                  : _buildMainContentView(defaultFontFamily),
-            ),
-            if (!_isLoading) _buildBottomActionBar(context, defaultFontFamily),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- Helper Widgets ---
-
-  // Builds the custom AppBar part
-  Widget _buildAppBar(BuildContext context, String fontFamily) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 4.0),
-      child: SizedBox(
-        height: kToolbarHeight,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                "AI Stylist",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: fontFamily, fontSize: 25, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 25, color: Colors.black),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Builds the main view when not loading
-  Widget _buildMainContentView(String fontFamily) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 17.0),
-      child: Column(
-        children: [
-          const Spacer(flex: 2),
-          Icon(Icons.smart_toy_outlined, size: 60, color: Colors.deepPurple.shade300),
-          const SizedBox(height: 30),
-          Text("Hi, I'm your personal AI Stylist!", textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 16, color: Colors.black)),
-          const SizedBox(height: 14),
-          Text("Lets us explore your Style Formula and Preferences.", textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 16, color: Colors.black)),
-          const SizedBox(height: 4),
-          Text("I'm here to bring your style to the next level!", textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 16, color: Colors.black)),
-          Expanded(flex: 3, child: Container(margin: const EdgeInsets.symmetric(vertical: 20), alignment: Alignment.center, child: const Text("Chat history will appear here"))),
-          const SizedBox(height: 10),
-          // Action buttons removed as per new design
-          const SizedBox(height: 15),
-        ],
-      ),
-    );
-  }
-
-  // Builds the loading view
-  Widget _buildLoadingView(String fontFamily) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 70, height: 70,
-            decoration: const BoxDecoration(color: Color(0xFFC4BFE2), shape: BoxShape.circle),
-            child: const Center(child: SizedBox(width: 35, height: 35, child: CircularProgressIndicator(strokeWidth: 3.0, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))),
-          ),
-          const SizedBox(height: 25),
-          Text(
-            "Analyzing your photos... 1/1\nGive us a few seconds - it won't take long",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 17, color: Colors.black, height: 1.3),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper for the bottom action buttons
-  Widget _buildActionButton(String fontFamily, String text, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF6F2EF), foregroundColor: Colors.black, elevation: 1, shadowColor: Colors.black.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), minimumSize: const Size(172, 56), padding: const EdgeInsets.symmetric(horizontal: 10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 14), maxLines: 2, overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 6),
-          const Icon(Icons.arrow_forward, size: 20),
-        ],
-      ),
-    );
-  }
-
-  // Builds the bottom action bar simulating text input and camera
-  Widget _buildBottomActionBar(BuildContext context, String fontFamily) {
-    return Container(
-      height: 75,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 0.5)),
-        boxShadow: [ BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, -2)) ],
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), topRight: Radius.circular(15)),
-      ),
-      child: Row(
-        children: [
-          // Camera Button
-          InkWell(
-            // *** UPDATED: Call _processImageFromCamera ***
-            onTap: _processImageFromCamera,
-            customBorder: const CircleBorder(),
-            child: Container(
-              width: 45, height: 45,
-              decoration: const BoxDecoration(color: Color(0xFFD55F5F), shape: BoxShape.circle),
-              child: const Center(child: Icon(Icons.camera_alt_outlined, color: Colors.white, size: 24)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Text Input Simulation
-          Expanded(
-            child: InkWell(
-              onTap: () { print("Chat input tapped"); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat Input - Not Implemented'))); },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                height: 45,
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black.withOpacity(0.06))),
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Take a photo from an item, and let the styling begin!",
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 13, fontWeight: FontWeight.w300, letterSpacing: -0.02 * 13, color: Colors.black.withOpacity(0.65)),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+// Removed duplicate AIStylistPage class and state. The version from ai_stylist_page.dart will be used.
+// ... existing code ...
 
 // --- ClosetPage ---
 class ClosetPage extends StatefulWidget {
@@ -1272,212 +1078,7 @@ class _ClosetPageState extends State<ClosetPage> {
       backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.only(top: 48.0, left: 16.0, right: 16.0, bottom: 16.0),
-        child: isComplete
-            ? _buildCompleteView(context)
-            : _buildIncompleteView(
-                context,
-                upperBodyCount,
-                lowerBodyCount,
-                targetUpperBodyCount, // Fixed target count for Upper Body
-                targetLowerBodyCount, // Fixed target count for Lower Body
-                totalItemsUploaded,
-                totalItemsRequired
-            )
-      )
-    );
-  }
-
-  Widget _buildIncompleteView(BuildContext context, int topsCount, int bottomsCount, int totalTops, int totalBottoms, int totalItemsUploaded, int totalItemsRequired) {
-    List<String?> outfitImageUrls = [null, null, null];
-
-    return RefreshIndicator(
-      onRefresh: _loadClosetItems,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            const Text(
-              "My Closet",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Archivo'
-              )
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F1EE),
-                borderRadius: BorderRadius.circular(12)
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Text(
-                        "$totalItemsUploaded/$totalItemsRequired ITEMS UPLOADED",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Archivo'
-                        )
-                      )
-                    ]
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Add at least 7 items, and your AI stylist will pair them into outfits",
-                    style: TextStyle(fontFamily: 'Archivo')
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 24
-                      ),
-                      minimumSize: const Size(double.infinity, 48)
-                    ),
-                    onPressed: _navigateToAddItem,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          "ADD ITEM",
-                          style: TextStyle(fontFamily: 'Archivo')
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward)
-                      ]
-                    )
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildProgressIndicator(
-                        context,
-                        "Upper Body",
-                        topsCount,
-                        totalTops
-                      ),
-                      _buildProgressIndicator(
-                        context,
-                        "Lower Body",
-                        bottomsCount,
-                        totalBottoms
-                      )
-                    ]
-                  )
-                ]
-              )
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Everyday"),
-                    child: _buildSmallCategoryCard(
-                      "Everyday",
-                      Icons.calendar_today,
-                      Colors.lightGreen
-                    ),
-                  )
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Weekend"),
-                    child: _buildSmallCategoryCard(
-                      "Weekend",
-                      Icons.weekend,
-                      Colors.pink[200]!
-                    ),
-                  )
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Workout"),
-                    child: _buildSmallCategoryCard(
-                      "Workout",
-                      Icons.fitness_center,
-                      Colors.orange[200]!
-                    ),
-                  )
-                )
-              ]
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "My Closet Outfits",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Archivo'
-                  )
-                ),
-                TextButton(
-                  onPressed: () => _navigateToMyOutfits(null),
-                  child: const Text(
-                    "View all",
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontFamily: 'Archivo'
-                    )
-                  )
-                )
-              ]
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: outfitImageUrls.isEmpty ? 1 : outfitImageUrls.length,
-                itemBuilder: (context, index) {
-                  if (outfitImageUrls.isEmpty) {
-                    return _buildOutfitCardPlaceholder(null);
-                  }
-                  return _buildOutfitCardPlaceholder(outfitImageUrls[index]);
-                }
-              )
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _navigateToAddItem,
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('Add New Item', style: TextStyle(fontFamily: 'Archivo', color: Colors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFD55F5F),
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              ),
-            ),
-          ]
-        )
+        child: _buildCompleteView(context)
       )
     );
   }
@@ -2768,27 +2369,49 @@ class PreferencesPreviewDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      elevation: 8,
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("My Preferences", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Archivo')),
-            const SizedBox(height: 16),
-            _buildRow("Fit", fit),
-            _buildRow("Lifestyle", lifestyle),
-            _buildRow("Season", season),
-            _buildRow("Age Group", ageGroup),
-            _buildRow("Preferred Colors", colors.join(", ")),
-            _buildRow("Excluded Categories", exclusions.join(", ")),
-            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(Icons.tune, color: Color(0xFFD55F5F), size: 28),
+                const SizedBox(width: 10),
+                const Text(
+                  "My Preferences",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Archivo',
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 32, thickness: 1.2),
+            _buildRow(Icons.accessibility_new, "Fit", fit),
+            _buildRow(Icons.directions_run, "Lifestyle", lifestyle),
+            _buildRow(Icons.wb_sunny, "Season", season),
+            _buildRow(Icons.cake, "Age Group", ageGroup),
+            _buildRow(Icons.palette, "Preferred Colors", colors.isNotEmpty ? colors.join(", ") : "None"),
+            _buildRow(Icons.block, "Excluded Categories", exclusions.isNotEmpty ? exclusions.join(", ") : "None"),
+            const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Color(0xFFD55F5F),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                  textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+                ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Close", style: TextStyle(fontSize: 16)),
+                child: const Text("Close"),
               ),
             ),
           ],
@@ -2797,12 +2420,14 @@ class PreferencesPreviewDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value) {
+  Widget _buildRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, color: Color(0xFFD55F5F), size: 20),
+          const SizedBox(width: 10),
           Text("$label: ", style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Archivo')),
           Expanded(child: Text(value, style: const TextStyle(fontFamily: 'Archivo'))),
         ],

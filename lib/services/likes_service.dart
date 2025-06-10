@@ -34,7 +34,7 @@ class LikesService {
               name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
               description: itemData['description'] ?? '',
               category: itemData['apparel_type'] ?? 'Unknown',
-              brand: itemData['brand'] ?? 'Unknown',
+              userName: itemData['brand'] ?? 'Unknown',
               price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
               imageUrl: itemData['path'],
               purchaseLink: itemData['purchase_link'],

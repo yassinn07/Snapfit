@@ -17,7 +17,7 @@ class ShopItem {
   final String name;
   final String description;
   final String category; // apparel_type in database
-  final String brand;    
+  final String userName;    
   final String price;    
   final String? imageUrl; // path in database
   bool isFavorite;
@@ -32,7 +32,7 @@ class ShopItem {
     required this.name,
     this.description = "",
     required this.category,
-    required this.brand,
+    required this.userName,
     required this.price,
     this.imageUrl,
     this.isFavorite = false,
@@ -131,7 +131,7 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
       ).toList();
     } else { // FilterType.brand
       _filteredItems = _allItems.where((item) =>
-          item.brand.toLowerCase() == widget.filterTitle.toLowerCase()
+          item.userName.toLowerCase() == widget.filterTitle.toLowerCase()
       ).toList();
     }
 
@@ -228,12 +228,27 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     // Open the purchase link URL if available
     if (item.purchaseLink != null && item.purchaseLink!.isNotEmpty) {
       final Uri url = Uri.parse(item.purchaseLink!);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
+      try {
+        final canLaunch = await canLaunchUrl(url);
+        if (canLaunch) {
+          final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+          if (!launched) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open store URL: ${item.purchaseLink}')),
+            );
+            debugPrint('Failed to launch \\${item.purchaseLink}');
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open store URL: ${item.purchaseLink}')),
+          );
+          debugPrint('Cannot launch \\${item.purchaseLink}');
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open store URL: ${item.purchaseLink}')),
+          SnackBar(content: Text('Error opening store URL: $e')),
         );
+        debugPrint('Exception launching \\${item.purchaseLink}: $e');
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,9 +295,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
       ),
       body: Column( // Use Column to stack Info Card and Grid
         children: [
-          // AI Stylist Info Card (CSS: Rectangle 107)
-          _buildAiStylistInfoCard(context, widget.filterTitle, defaultFontFamily),
-
           // Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 17.0, vertical: 8.0),
@@ -390,68 +402,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
 
   // --- Helper Widgets ---
 
-  // Builds the informational card about shopping with AI Stylist
-  Widget _buildAiStylistInfoCard(BuildContext context, String filterName, String fontFamily) {
-    // Use filterName to customize text
-    String aiTitle = "Shop $filterName with your AI Stylist";
-    // Placeholder for the icon mentioned in the description text
-    Widget embeddedIcon = Container(
-      width: 26, height: 26, // CSS size
-      padding: const EdgeInsets.all(2),
-      margin: const EdgeInsets.symmetric(horizontal: 2.0), // Space around icon
-      decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle), // CSS style
-      // TODO: Replace with actual logo asset Image.asset('assets/images/logo_small_placeholder.png'...)
-      child: const Icon(Icons.smart_toy_outlined, color: Colors.white, size: 16),
-    );
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 17.0, vertical: 10.0), // Match CSS left/right, add vertical margin
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Internal padding
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F1EE), // CSS background
-        borderRadius: BorderRadius.circular(5), // CSS border-radius
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // AI Logo Placeholder
-          // TODO: Use actual AI logo if available
-          const Icon(Icons.smart_toy_outlined, size: 30, color: Colors.black), // Simplified representation
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text( // Title Text
-                  aiTitle,
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 20, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 20, color: Colors.black),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                // Description with embedded icon - using RichText
-                RichText(
-                  text: TextSpan(
-                      style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 14, color: Colors.black.withOpacity(0.9), height: 1.2),
-                      children: [
-                        const TextSpan(text: "Tap the "),
-                        // WidgetSpan embeds the icon within the text flow
-                        WidgetSpan(child: embeddedIcon, alignment: PlaceholderAlignment.middle),
-                        const TextSpan(text: " to see if the item matches your closet!"),
-                      ]
-                  ),
-                )
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Trailing Icon (CSS: image 110)
-          // TODO: Replace with specific Image.asset if needed
-          const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.black54),
-        ],
-      ),
-    );
-  }
-
   // Builds a card for a single shop item in the grid
   Widget _buildShopItemCard({
     required BuildContext context,
@@ -502,16 +452,18 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                           onTap: onFavoriteTap
                       )
                   ),
-                  Positioned(top: 8, right: 8,
-                      child: _buildItemOverlayButton(
-                          icon: Icons.smart_toy_outlined,
-                          onTap: onAiTap
-                      )
-                  ),
                   Positioned(bottom: 8, right: 8,
                       child: _buildItemOverlayButton(
                           icon: Icons.shopping_bag_outlined,
-                          onTap: () => _visitStore(item)
+                          onTap: () => _visitStore(item),
+                          // Add a comment to remind about permissions for Android and iOS
+                          // Android: Add <uses-permission android:name="android.permission.INTERNET" /> to AndroidManifest.xml
+                          // iOS: Add LSApplicationQueriesSchemes to Info.plist if needed for universal links.
+                          // No code change needed unless url_launcher is not in pubspec.yaml.
+                          // If not, add to pubspec.yaml:
+                          // dependencies:
+                          //   url_launcher: ^6.1.7
+                          // Then run: flutter pub get
                       )
                   ),
                 ],
@@ -530,7 +482,7 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "${item.name} | ${item.brand}",
+                  "${item.name} | ${item.userName}",
                   style: TextStyle(fontFamily: fontFamily, fontSize: 13, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02*13),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

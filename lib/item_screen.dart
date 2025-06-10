@@ -182,7 +182,7 @@ class _ItemScreenState extends State<ItemScreen> {
   @override
   Widget build(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
-    final String itemTitle = "${widget.item.name} | ${widget.item.brand}";
+    final String itemTitle = "${widget.item.name} | ${widget.item.userName}";
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -619,7 +619,7 @@ class _ItemScreenState extends State<ItemScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text( // Name | Brand
-                  "${item.name} | ${item.brand}",
+                  "${item.name} | ${item.userName}",
                   style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02*12),
                   maxLines: 2, overflow: TextOverflow.ellipsis,
                 ),

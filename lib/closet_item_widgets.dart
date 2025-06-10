@@ -11,6 +11,60 @@ Widget buildClosetItemsRow({
   required Function(ClosetItem) onDelete,
   required VoidCallback onAddItem,
 }) {
+  if (items.isEmpty) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F1EE),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.checkroom, size: 36, color: Colors.grey),
+              const SizedBox(height: 8),
+              Text(
+                "No items here yet!",
+                style: TextStyle(
+                  fontFamily: fontFamily,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Add your first item to start building your closet.",
+                style: TextStyle(
+                  fontFamily: fontFamily,
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: onAddItem,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text("Add Item"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD55F5F),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   return SizedBox(
     height: 201,
     child: ListView.builder(
@@ -44,50 +98,67 @@ class ClosetItemDetailsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      elevation: 8,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Image with rounded top corners
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                 ? Image.network(
                     item.imageUrl!.startsWith('http')
-                      ? item.imageUrl!
-                      : 'http://10.0.2.2:8000/static/${item.imageUrl!}',
+                        ? item.imageUrl!
+                        : 'http://10.0.2.2:8000/static/${item.imageUrl!}',
                     width: double.infinity,
-                    height: 250,
+                    height: 220,
                     fit: BoxFit.cover,
                   )
                 : Container(
-                    height: 250,
+                    height: 220,
+                    width: double.infinity,
                     color: Colors.grey[200],
                     child: const Icon(Icons.checkroom, size: 80, color: Colors.grey),
                   ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.subcategory,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: fontFamily,
+                    color: const Color(0xFFD55F5F),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 24, thickness: 1.2),
+                _buildDetailRow("Subcategory", item.subcategory),
+                _buildDetailRow("Color", item.color),
+                _buildDetailRow("Size", item.size),
+                _buildDetailRow("Occasion", item.occasion),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
-                  const SizedBox(height: 10),
-                  _buildDetailRow("Subcategory", item.subcategory),
-                  _buildDetailRow("Color", item.color),
-                  _buildDetailRow("Size", item.size),
-                  _buildDetailRow("Occasion", item.occasion),
-                ],
-              ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close", style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
+            child: const Text("Close"),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

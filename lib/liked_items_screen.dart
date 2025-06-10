@@ -172,90 +172,136 @@ class _LikedItemsScreenState extends State<LikedItemsScreen> {
                   itemBuilder: (context, index) {
                     final fav = _favorites[index];
                     final item = fav['item'] ?? {};
-                    return Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
-                                ),
-                                child: Image.network(
-                                  getFullImageUrl(item['path']),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: 170,
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    color: Colors.grey[200],
-                                    height: 170,
-                                    child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                    print('Favorite item: ' + item.toString());
+                    return InkWell(
+                      onTap: () {
+                        final shopItem = ShopItem(
+                          id: (item['id'] ?? '').toString(),
+                          name: item['name'] ?? item['subtype'] ?? 'Unknown Item',
+                          description: item['description'] ?? '',
+                          category: item['category'] ?? item['apparel_type'] ?? '',
+                          userName: item['user_name'] ?? '',
+                          price: item['price'] != null ? item['price'].toString() : '',
+                          imageUrl: item['image_url'] ?? item['path'],
+                          isFavorite: true,
+                          purchaseLink: item['purchase_link'],
+                          color: item['color'] ?? '',
+                          size: item['size'] ?? '',
+                          occasion: item['occasion'] ?? '',
+                          gender: item['gender'] ?? '',
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ItemScreen(item: shopItem, token: widget.token),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                                    child: (item['image_url'] != null && item['image_url'].toString().isNotEmpty)
+                                        ? Image.network(
+                                            getFullImageUrl(item['image_url']),
+                                            height: 160,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : (item['path'] != null && item['path'].toString().isNotEmpty
+                                            ? Image.network(
+                                                getFullImageUrl(item['path']),
+                                                height: 160,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Container(
+                                                height: 160,
+                                                width: double.infinity,
+                                                color: Colors.grey[200],
+                                                child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                                              )),
                                   ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: Material(
-                                  color: Colors.white.withOpacity(0.7),
-                                  shape: const CircleBorder(),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      Icons.favorite,
-                                      color: Colors.red,
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: Material(
+                                      color: Colors.white,
+                                      shape: const CircleBorder(),
+                                      elevation: 2,
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: () {
+                                          _removeFavorite(fav['item_id'].toString());
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Icon(
+                                            Icons.favorite,
+                                            color: Colors.red,
+                                            size: 26,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    onPressed: () {
-                                      _removeFavorite(fav['item_id'].toString());
-                                    },
-                                    iconSize: 20,
-                                    padding: EdgeInsets.all(4),
-                                    constraints: const BoxConstraints(),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['apparel_type'] != null && item['subtype'] != null
-                                    ? '${item['apparel_type']} | ${item['subtype']}'
-                                    : 'Unknown Item',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item['price'] != null
-                                    ? '\$${item['price'].toString()}'
-                                    : '',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
                             ),
-                          ),
-                        ],
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['name'] ?? item['subtype'] ?? 'Unknown Item',
+                                    style: const TextStyle(
+                                      fontFamily: 'Archivo',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFD55F5F),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Divider(height: 24, thickness: 1.2),
+                                  _buildDetailRow('Brand',
+                                    item['user_name'] ?? fav['user_name'] ?? item['brand'] ?? fav['brand'] ?? item['item_brand'] ?? item['item']?['brand'] ?? ''
+                                  ),
+                                  _buildDetailRow('Category', item['category'] ?? item['apparel_type'] ?? ''),
+                                  _buildDetailRow('Price', item['price'] != null ? '${item['price']}' : ''),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 ),
               ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        children: [
+          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Archivo')),
+          Expanded(child: Text(value, style: const TextStyle(fontFamily: 'Archivo'))),
+        ],
+      ),
     );
   }
 } 

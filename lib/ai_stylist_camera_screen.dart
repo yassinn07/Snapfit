@@ -71,7 +71,7 @@ class _AIStylistCameraScreenState extends State<AIStylistCameraScreen> {
         id: 'camera_item',
         name: 'Your Clothing Item',
         category: 'Unknown Category', // In a real app, this would be detected
-        brand: 'Your Wardrobe',
+        userName: 'Your Wardrobe',
         price: 'N/A',
         imageUrl: null, // We can't use local files directly as imageUrl
         description: 'Item captured from camera',
