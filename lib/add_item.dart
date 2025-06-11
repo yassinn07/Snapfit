@@ -409,86 +409,86 @@ class _AddItemPageState extends State<AddItemPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 32.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                   const Text(
                     'Item Details',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily),
                     textAlign: TextAlign.center,
                   ),
                   const Divider(height: 32, thickness: 1.2),
-                  TextFormField(
-                    controller: _nameController,
-                    style: const TextStyle(fontFamily: fontFamily),
-                    decoration: const InputDecoration(
-                      labelText: 'Name/Description',
+                      TextFormField(
+                        controller: _nameController,
+                        style: const TextStyle(fontFamily: fontFamily),
+                        decoration: const InputDecoration(
+                          labelText: 'Name/Description',
                       prefixIcon: Icon(Icons.label_outline, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
-                    validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    value: _subcategory,
+                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                          border: themedBorder,
+                          focusedBorder: themedBorder,
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
+                      ),
+                      const SizedBox(height: 18),
+                        DropdownButtonFormField<String>(
+                          value: _subcategory,
                     items: (_selectedCategory != null ? (_subcategories[_selectedCategory] ?? <String>[]) : <String>[])
                         .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
                             value: sub,
                             child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
                         ))
                         .toList(),
-                    onChanged: (val) => setState(() => _subcategory = val),
-                    decoration: const InputDecoration(
-                      labelText: 'Subcategory',
+                          onChanged: (val) => setState(() => _subcategory = val),
+                          decoration: const InputDecoration(
+                            labelText: 'Subcategory',
                       prefixIcon: Icon(Icons.category_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
-                    validator: (value) => value == null ? 'Please select a subcategory' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                    dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
-                  ),
+                            labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                            border: themedBorder,
+                            focusedBorder: themedBorder,
+                          ),
+                          validator: (value) => value == null ? 'Please select a subcategory' : null,
+                          style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                          dropdownColor: Colors.white,
+                          iconEnabledColor: mainRed,
+                        ),
                   const SizedBox(height: 18),
-                  TextFormField(
-                    controller: _colorController,
-                    style: const TextStyle(fontFamily: fontFamily),
-                    decoration: const InputDecoration(
-                      labelText: 'Color',
+                      TextFormField(
+                        controller: _colorController,
+                        style: const TextStyle(fontFamily: fontFamily),
+                        decoration: const InputDecoration(
+                          labelText: 'Color',
                       prefixIcon: Icon(Icons.color_lens_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
-                    validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
-                    items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _sizeController.text = val ?? '';
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Size',
+                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                          border: themedBorder,
+                          focusedBorder: themedBorder,
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
+                      ),
+                      const SizedBox(height: 18),
+                      DropdownButtonFormField<String>(
+                        value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
+                        items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _sizeController.text = val ?? '';
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Size',
                       prefixIcon: Icon(Icons.straighten, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
-                    validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                    dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
-                  ),
-                  const SizedBox(height: 18),
+                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                          border: themedBorder,
+                          focusedBorder: themedBorder,
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
+                        style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                        dropdownColor: Colors.white,
+                        iconEnabledColor: mainRed,
+                      ),
+                      const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
                     value: _occasionOptions.contains(_occasion) ? _occasion : null,
                     items: _occasionOptions
@@ -503,51 +503,51 @@ class _AddItemPageState extends State<AddItemPage> {
                         _occasionController.text = val ?? '';
                       });
                     },
-                    decoration: const InputDecoration(
-                      labelText: 'Occasion',
+                        decoration: const InputDecoration(
+                          labelText: 'Occasion',
                       prefixIcon: Icon(Icons.event_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
+                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                          border: themedBorder,
+                          focusedBorder: themedBorder,
+                        ),
                     validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
                     style: const TextStyle(fontFamily: fontFamily, color: mainRed),
                     dropdownColor: Colors.white,
                     iconEnabledColor: mainRed,
-                  ),
-                  const SizedBox(height: 18),
-                  TextFormField(
-                    controller: _brandController,
-                    style: const TextStyle(fontFamily: fontFamily),
-                    decoration: const InputDecoration(
-                      labelText: 'Brand',
+                      ),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: _brandController,
+                        style: const TextStyle(fontFamily: fontFamily),
+                        decoration: const InputDecoration(
+                          labelText: 'Brand',
                       prefixIcon: Icon(Icons.store_mall_directory_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                      border: themedBorder,
-                      focusedBorder: themedBorder,
-                    ),
-                  ),
+                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                          border: themedBorder,
+                          focusedBorder: themedBorder,
+                        ),
+                      ),
                   const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mainRed,
-                      foregroundColor: Colors.white,
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: mainRed,
+                          foregroundColor: Colors.white,
                       elevation: 3,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       minimumSize: const Size(double.infinity, 56),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Add Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
                   ),
                 ],
-              ),
             ),
           ),
         ),
-      );
+      ),
+    );
     }
   }
 }

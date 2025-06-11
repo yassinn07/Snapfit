@@ -86,9 +86,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     const String defaultFontFamily = 'Archivo';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F2EF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF6F2EF),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -97,7 +97,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         title: const Text(
           "Change Password",
           style: TextStyle(
-            fontFamily: defaultFontFamily,
+            fontFamily: 'Archivo',
             fontSize: 25,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.02 * 25,
@@ -119,7 +119,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   _buildPasswordField(
                     controller: _currentPasswordController,
                     labelText: "Current Password",
-                    fontFamily: defaultFontFamily,
+                    fontFamily: 'Archivo',
                     obscureText: _obscureCurrentPassword,
                     toggleObscure: () {
                       setState(() {
@@ -139,7 +139,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   _buildPasswordField(
                     controller: _newPasswordController,
                     labelText: "New Password",
-                    fontFamily: defaultFontFamily,
+                    fontFamily: 'Archivo',
                     obscureText: _obscureNewPassword,
                     toggleObscure: () {
                       setState(() {
@@ -162,7 +162,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   _buildPasswordField(
                     controller: _confirmPasswordController,
                     labelText: "Confirm New Password",
-                    fontFamily: defaultFontFamily,
+                    fontFamily: 'Archivo',
                     obscureText: _obscureConfirmPassword,
                     toggleObscure: () {
                       setState(() {
@@ -185,7 +185,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   ElevatedButton(
                     onPressed: _changePassword,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFFD55F5F),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
@@ -196,7 +196,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     child: const Text(
                       "Save Password",
                       style: TextStyle(
-                        fontFamily: defaultFontFamily,
+                        fontFamily: 'Archivo',
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),

@@ -60,13 +60,24 @@ class LandingScreen extends StatelessWidget {
               width: 353,
               height: 54,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.email, color: Colors.black), // Email icon
-                label: const Text("Continue with Email"),
+                icon: const Icon(Icons.email, color: Colors.white), // Email icon
+                label: const Text(
+                  "Continue with Email",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Archivo',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F3F3),
+                  backgroundColor: const Color(0xFFD55F5F),
+                  elevation: 6,
+                  shadowColor: Colors.black.withOpacity(0.08),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
                 ),
                 onPressed: () {
                   Navigator.push(

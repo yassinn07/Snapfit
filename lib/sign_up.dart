@@ -159,8 +159,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const String fontFamily = 'Archivo';
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F1EE),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -168,7 +169,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Center(
                   child: Image.asset(
                     'assets/logo_small.png',
@@ -176,186 +177,243 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     height: 80,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 const Text(
                   'Create Account',
                   style: TextStyle(
-                    fontSize: 32, // Slightly adjusted for typical screen density
-                    fontFamily: 'Archivo', // Ensure this font is included in pubspec.yaml
+                    fontSize: 32,
+                    fontFamily: fontFamily,
                     letterSpacing: -0.02,
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 30),
-                // User Type Dropdown
-                const Text("I am a...", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _userType,
-                  items: _userTypes.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _userType = newValue;
-                      // Reset conditional fields if user type changes
-                      if (newValue == 'Consumer') {
-                        _descriptionController.clear();
-                      } else if (newValue == 'Brand') {
-                        _size = null;
-                        _gender = null;
-                      }
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Select user type",
-                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                  validator: (value) => value == null ? 'Please select a user type' : null,
-                ),
-                const SizedBox(height: 20),
-                const Text("Username", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    hintText: "Choose a username",
-                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text("Email", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    hintText: "your.email@example.com",
-                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text("Password", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: "Create a strong password",
-                    hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Conditional fields based on user type
-                if (_userType == 'Consumer') ...[
-                  const Text("Size", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _size,
-                    items: _sizes.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      setState(() {
-                        _size = newValue;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Select your clothing size",
-                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                    ),
-                    validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your size' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text("Gender", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _gender,
-                    items: _genders.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      setState(() {
-                        _gender = newValue;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Select your gender",
-                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                    ),
-                    validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your gender' : null,
-                  ),
-                  const SizedBox(height: 20),
-                ] else if (_userType == 'Brand') ...[
-                  const Text("Brand Description", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _descriptionController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: "Tell us about your brand",
-                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
-                const SizedBox(height: 30), // Increased spacing before button
-                Center(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black, // Use backgroundColor for newer Flutter versions
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
-                      onPressed: _signUp, // Assuming _isLoading is false or handled
-                      child: const Text(
-                        "Sign Up",
-                        style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("I am a...", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _userType,
+                        items: _userTypes.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+                              child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                            ),
+                          );
+                        }).toList(),
+                        selectedItemBuilder: (context) => _userTypes.map((value) => Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0.0),
+                            child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                          ),
+                        )).toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            _userType = newValue;
+                            if (newValue == 'Consumer') {
+                              _descriptionController.clear();
+                            } else if (newValue == 'Brand') {
+                              _size = null;
+                              _gender = null;
+                            }
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: "Select user type",
+                          hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        validator: (value) => value == null ? 'Please select a user type' : null,
+                        dropdownColor: Colors.white,
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      const Text("Username", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _usernameController,
+                        decoration: InputDecoration(
+                          hintText: "Choose a username",
+                          hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        style: const TextStyle(fontFamily: fontFamily),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text("Email", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          hintText: "your.email@example.com",
+                          hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        style: const TextStyle(fontFamily: fontFamily),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text("Password", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          hintText: "Create a strong password",
+                          hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        style: const TextStyle(fontFamily: fontFamily),
+                      ),
+                      const SizedBox(height: 20),
+                      if (_userType == 'Consumer') ...[
+                        const Text("Size", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _size,
+                          items: _sizes.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+                                child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                              ),
+                            );
+                          }).toList(),
+                          selectedItemBuilder: (context) => _sizes.map((value) => Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0.0),
+                              child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                            ),
+                          )).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _size = newValue;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Select your clothing size",
+                            hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                          ),
+                          validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your size' : null,
+                          dropdownColor: Colors.white,
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text("Gender", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _gender,
+                          items: _genders.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+                                child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                              ),
+                            );
+                          }).toList(),
+                          selectedItemBuilder: (context) => _genders.map((value) => Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0.0),
+                              child: Text(value, style: const TextStyle(fontFamily: fontFamily)),
+                            ),
+                          )).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _gender = newValue;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Select your gender",
+                            hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                          ),
+                          validator: (value) => _userType == 'Consumer' && value == null ? 'Please select your gender' : null,
+                          dropdownColor: Colors.white,
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        const SizedBox(height: 20),
+                      ] else if (_userType == 'Brand') ...[
+                        const Text("Brand Description", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, fontFamily: fontFamily)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _descriptionController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: "Tell us about your brand",
+                            hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                          ),
+                          style: const TextStyle(fontFamily: fontFamily),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      const SizedBox(height: 30),
+                      Center(
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD55F5F),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: _signUp,
+                            child: const Text(
+                              "Sign Up",
+                              style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600, fontFamily: fontFamily),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 40), // Adjusted spacing
+                const SizedBox(height: 32),
                 Center(
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.pushReplacement( // Use pushReplacement if you don't want to come back to signup
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const LoginScreen()),
                       );
@@ -363,7 +421,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: RichText(
                       text: TextSpan(
                         text: "Already have an account? ",
-                        style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.7)),
+                        style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.7), fontFamily: fontFamily),
                         children: const [
                           TextSpan(
                             text: "Log In",
@@ -371,7 +429,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.underline,
-                              color: Colors.black, // Make it stand out a bit more
+                              color: Colors.black,
+                              fontFamily: fontFamily,
                             ),
                           ),
                         ],
@@ -379,7 +438,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 40), // Bottom padding
+                const SizedBox(height: 40),
               ],
             ),
           ),

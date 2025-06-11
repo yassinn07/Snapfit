@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'ai_stylist_camera_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AIStylistPage extends StatefulWidget {
   @override
@@ -12,27 +13,53 @@ class _AIStylistPageState extends State<AIStylistPage> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, String>> chatHistory = [];
   bool _isLoading = false;
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('user_id');
+    });
+  }
 
   Future<void> sendMessage(String message) async {
     setState(() {
       chatHistory.add({'role': 'user', 'text': message});
       _isLoading = true;
     });
-    final response = await http.post(
-      Uri.parse('http://10.0.2.2:8000/chat'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'query': message}),
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final botReply = data['answer'];
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/chat'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'query': message,
+          'user_id': _userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final botReply = data['answer'];
+        setState(() {
+          chatHistory.add({'role': 'bot', 'text': botReply});
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to get response');
+      }
+    } catch (e) {
       setState(() {
-        chatHistory.add({'role': 'bot', 'text': botReply});
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        chatHistory.add({'role': 'bot', 'text': 'Sorry, something went wrong.'});
+        chatHistory.add({
+          'role': 'bot',
+          'text': 'Sorry, something went wrong. Please try again.'
+        });
         _isLoading = false;
       });
     }
@@ -42,16 +69,17 @@ class _AIStylistPageState extends State<AIStylistPage> {
   Widget build(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
     return Scaffold(
-      backgroundColor: Color(0xFFF6F2EF),
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Color(0xFFF6F2EF),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Text(
+        title: const Text(
           'AI Stylist',
           style: TextStyle(
-            fontFamily: defaultFontFamily,
+            fontFamily: 'Archivo',
             fontWeight: FontWeight.w600,
             fontSize: 22,
             color: Colors.black,
@@ -59,103 +87,115 @@ class _AIStylistPageState extends State<AIStylistPage> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              reverse: false,
-              itemCount: chatHistory.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (_isLoading && index == chatHistory.length) {
-                  return Row(
-                    children: [
-                      CircleAvatar(child: Icon(Icons.smart_toy, color: Colors.white), backgroundColor: Color(0xFFD55F5F)),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ],
-                  );
-                }
-                return _buildMessage(chatHistory[index], defaultFontFamily);
-              },
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/ai_stylist_screen_background.jpeg',
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            child: Row(
+            Column(
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Color(0xFFD55F5F),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    reverse: false,
+                    itemCount: chatHistory.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isLoading && index == chatHistory.length) {
+                        return Row(
+                          children: [
+                            CircleAvatar(child: Icon(Icons.smart_toy, color: Color(0xFFD55F5F)), backgroundColor: Colors.white),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ],
+                        );
+                      }
+                      return _buildMessage(chatHistory[index], defaultFontFamily);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white, // CSS background: rgb(FFFFFF''),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.camera_alt_outlined, color: Color(0xFFD55F5F)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AIStylistCameraScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _controller,
+                            style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16),
+                            decoration: InputDecoration(
+                              hintText: 'Ask me about fashion!',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.send, color: Color(0xFFD55F5F)),
+                          onPressed: () {
+                            final msg = _controller.text;
+                            if (msg.isNotEmpty && !_isLoading) {
+                              sendMessage(msg);
+                              _controller.clear();
+                            }
+                          },
+                        ),
                       ),
                     ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.camera_alt_outlined, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AIStylistCameraScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16),
-                      decoration: InputDecoration(
-                        hintText: 'Ask me about fashion!',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Color(0xFFD55F5F),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.send, color: Colors.white),
-                    onPressed: () {
-                      final msg = _controller.text;
-                      if (msg.isNotEmpty && !_isLoading) {
-                        sendMessage(msg);
-                        _controller.clear();
-                      }
-                    },
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -172,8 +212,8 @@ class _AIStylistPageState extends State<AIStylistPage> {
             Padding(
               padding: const EdgeInsets.only(right: 6.0),
               child: CircleAvatar(
-                backgroundColor: Color(0xFFD55F5F),
-                child: Icon(Icons.smart_toy, color: Colors.white),
+                backgroundColor: Colors.white,
+                child: Icon(Icons.smart_toy, color: Color(0xFFD55F5F)),
               ),
             ),
           Flexible(

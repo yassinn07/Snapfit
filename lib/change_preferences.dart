@@ -99,8 +99,8 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
       context: context, // Provide context
       shape: const RoundedRectangleBorder( // Rounded corners
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (BuildContext modalContext) { // Provide builder function
-        // Use modalContext inside the builder
+      backgroundColor: const Color(0xFFFDF9F7),
+      builder: (BuildContext modalContext) {
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -108,9 +108,8 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(modalContext).textTheme.titleLarge?.copyWith(fontFamily: 'Archivo')),
+                Text(title, style: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
                 const SizedBox(height: 15),
-                // Use StatefulBuilder to manage the radio button state within the modal
                 StatefulBuilder(
                     builder: (BuildContext context, StateSetter setModalState) {
                       return ListView.builder(
@@ -120,20 +119,15 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                         itemBuilder: (context, index) {
                           final option = options[index];
                           return RadioListTile<String>(
-                            title: Text(option, style: const TextStyle(fontFamily: 'Archivo')),
+                            title: Text(option, style: const TextStyle(fontFamily: 'Archivo', color: Colors.black)),
                             value: option,
                             groupValue: currentSelection, // Use local state for groupValue
                             onChanged: (String? value) {
                               if (value != null) {
-                                // Update local state for immediate UI feedback (optional but good UX)
-                                // setModalState(() {
-                                //   currentSelection = value;
-                                // });
-                                // Pop with the selected value
                                 Navigator.pop(modalContext, value);
                               }
                             },
-                            activeColor: const Color(0xFF8960C4), // Theme color
+                            activeColor: const Color(0xFFD55F5F),
                           );
                         },
                       );
@@ -201,8 +195,8 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
       isScrollControlled: true, // Allow modal to take more height
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: const Color(0xFFFDF9F7),
       builder: (BuildContext modalContext) {
-        // Use StatefulBuilder to manage state within the modal
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
@@ -215,7 +209,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Archivo')),
+                      Text(title, style: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
                       const SizedBox(height: 15),
                       Expanded(
                         child: ListView.builder(
@@ -224,10 +218,9 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                           itemBuilder: (context, index) {
                             final option = options[index];
                             return CheckboxListTile(
-                              title: Text(option, style: const TextStyle(fontFamily: 'Archivo')),
+                              title: Text(option, style: const TextStyle(fontFamily: 'Archivo', color: Colors.black)),
                               value: tempSelection.contains(option),
                               onChanged: (bool? value) {
-                                // Update the tempSelection list and rebuild modal
                                 setModalState(() {
                                   if (value == true && !tempSelection.contains(option)) {
                                     tempSelection.add(option);
@@ -236,7 +229,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                                   }
                                 });
                               },
-                              activeColor: const Color(0xFF8960C4),
+                              activeColor: const Color(0xFFD55F5F),
                               checkColor: Colors.white,
                               controlAffinity: ListTileControlAffinity.leading,
                             );
@@ -256,21 +249,21 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                             child: const Text("Clear All", 
                               style: TextStyle(
                                 color: Colors.red, 
-                                fontFamily: 'Archivo'
+                                fontFamily: 'Archivo',
+                                fontWeight: FontWeight.bold,
                               )
                             ),
                           ),
                           ElevatedButton(
                             onPressed: () {
-                              // Return the final selection
                               Navigator.pop(modalContext, tempSelection);
                             },
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
+                                backgroundColor: Color(0xFFD55F5F),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12)
                             ),
-                            child: const Text("Done", style: TextStyle(fontFamily: 'Archivo')),
+                            child: const Text("Done", style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -369,7 +362,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
     // Build method remains the same
     const String defaultFontFamily = 'Archivo';
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF9F7),
+      backgroundColor: const Color(0xFFF6F2EF),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -377,7 +370,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
         ),
         title: const Text(
           "Change Preferences",
-          style: TextStyle(fontFamily: defaultFontFamily, fontSize: 25, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 25, color: Colors.black),
+          style: TextStyle(fontFamily: 'Archivo', fontSize: 25, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 25, color: Colors.black),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -389,30 +382,40 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
             padding: const EdgeInsets.symmetric(horizontal: 19.0, vertical: 20.0),
             child: Column(
               children: [
-                _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: 'Archivo'),
                 const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: 'Archivo'),
                 const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: 'Archivo'),
                 const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: 'Archivo'),
                 const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: 'Archivo'),
                 const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "I want to exclude", currentValue: _selectedExclusions.isEmpty ? "Select categories you don't want" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: defaultFontFamily),
+                _buildPreferenceEditRow(title: "Exclusions", currentValue: _selectedExclusions.isEmpty ? "Select excluded categories" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: 'Archivo'),
                 const SizedBox(height: 40),
-                ElevatedButton(
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
                     onPressed: _savePreferences,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: const Color(0xFFD55F5F),
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        padding: const EdgeInsets.symmetric(vertical: 12)
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                     ),
-                    child: const Text("Save Preferences", style: TextStyle(fontFamily: defaultFontFamily, fontSize: 16, fontWeight: FontWeight.w500))
+                    child: const Text(
+                      "Save Preferences",
+                      style: TextStyle(
+                        fontFamily: 'Archivo',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 20),
               ],
             ),
           ),

@@ -392,15 +392,22 @@ class _ItemScreenState extends State<ItemScreen> {
         ),
         const SizedBox(width: 10), // Space before button
 
-        // Generate Outfits Button (CSS: Rectangle 84, text, image 130)
+        // Generate Outfits Button (theme style)
         InkWell(
           onTap: _isGeneratingOutfits ? null : _generateOutfits,
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFC4BFE2),
+              color: const Color(0xFFD55F5F),
               borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -409,13 +416,13 @@ class _ItemScreenState extends State<ItemScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.auto_awesome_outlined, size: 18, color: Colors.black),
-                const SizedBox(width: 6),
+                    : const Icon(Icons.auto_awesome_outlined, size: 18, color: Colors.white),
+                const SizedBox(width: 8),
                 Text(
                   _isGeneratingOutfits ? "Generating..." : "Generate Outfits",
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 14, color: Colors.black),
+                  style: TextStyle(fontFamily: fontFamily, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.02 * 15, color: Colors.white),
                 ),
               ],
             ),
@@ -500,17 +507,18 @@ class _ItemScreenState extends State<ItemScreen> {
       child: ElevatedButton(
         onPressed: _visitStore,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black, // CSS background: #000000
+          backgroundColor: const Color(0xFFD55F5F),
           foregroundColor: Colors.white, // Text color
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10), // CSS border-radius: 10px
           ),
-          textStyle: const TextStyle( // CSS: Button text style
-            fontFamily: 'Inter', // Different font specified in CSS
+          textStyle: const TextStyle(
+            fontFamily: 'Archivo',
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            // lineHeight: 1.25, // Flutter uses height multiplier
           ),
+          elevation: 6,
+          shadowColor: Colors.black.withOpacity(0.08),
         ),
         child: const Text("Visit Store"),
       ),

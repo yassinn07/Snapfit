@@ -76,9 +76,9 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
     const String defaultFontFamily = 'Archivo';
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F2EF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF6F2EF),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -87,7 +87,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
         title: const Text(
           "Send Feedback",
           style: TextStyle(
-            fontFamily: defaultFontFamily,
+            fontFamily: 'Archivo',
             fontSize: 25,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.02 * 25,
@@ -107,17 +107,17 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
                 Text(
                   "We appreciate your feedback",
                   style: TextStyle(
-                    fontFamily: defaultFontFamily,
+                    fontFamily: 'Archivo',
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
+                    color: Color(0xFFD55F5F),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   "Please share your thoughts, suggestions, or report any issues you've encountered.",
                   style: TextStyle(
-                    fontFamily: defaultFontFamily,
+                    fontFamily: 'Archivo',
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                     color: Colors.black.withOpacity(0.7),
@@ -126,7 +126,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
                 const SizedBox(height: 24),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F1EE).withOpacity(0.5),
+                    color: const Color(0xFFFDF9F7),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
@@ -134,13 +134,13 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
                     controller: _feedbackController,
                     maxLines: 10,
                     style: const TextStyle(
-                      fontFamily: defaultFontFamily,
+                      fontFamily: 'Archivo',
                       fontSize: 16,
                     ),
                     decoration: InputDecoration(
                       hintText: "Enter your feedback here...",
                       hintStyle: TextStyle(
-                        fontFamily: defaultFontFamily,
+                        fontFamily: 'Archivo',
                         fontSize: 16,
                         color: Colors.grey.shade500,
                       ),
@@ -156,7 +156,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
                   child: ElevatedButton(
                     onPressed: _submitFeedback,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFFD55F5F),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -165,7 +165,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
                     child: const Text(
                       "Submit Feedback",
                       style: TextStyle(
-                        fontFamily: defaultFontFamily,
+                        fontFamily: 'Archivo',
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),

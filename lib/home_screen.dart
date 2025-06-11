@@ -890,11 +890,11 @@ class _MyShopPageState extends State<MyShopPage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.09),
-              blurRadius: 4,
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -903,11 +903,11 @@ class _MyShopPageState extends State<MyShopPage> {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             child: SizedBox(
-              height: 48,
+              height: 54,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
                 child: Row(
                   children: [
                     Expanded(
@@ -922,14 +922,14 @@ class _MyShopPageState extends State<MyShopPage> {
                         ),
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 15, color: Colors.black54),
+                    const Icon(Icons.arrow_forward_ios, size: 17, color: Colors.black54),
                   ],
                 ),
               ),
             ),
           ),
         ),
-      )
+      ),
     );
   }
 }
@@ -1140,7 +1140,7 @@ class _ClosetPageState extends State<ClosetPage> {
             const SizedBox(height: 24),
             _buildSectionHeader(
               context: context,
-              title: "My Closet Outfits",
+              title: "My Closet ",
               fontFamily: defaultFontFamily,
               onNavigate: () => _navigateToMyOutfits(null)
             ),
@@ -1995,7 +1995,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F2EF),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -2013,7 +2013,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           onTap: _changeProfilePicture,
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundColor: const Color(0xFFF3F3F3),
+                            backgroundColor: const Color(0xFFF6F2EF),
                             child: imageUrl != null && imageUrl.isNotEmpty
                                 ? ClipOval(
                                     child: Image.network(
@@ -2024,7 +2024,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       errorBuilder: (context, error, stackTrace) => Center(
                                         child: Text(
                                           userInitial,
-                                          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54),
+                                          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
                                         ),
                                       ),
                                       loadingBuilder: (context, child, loadingProgress) {
@@ -2036,7 +2036,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : Center(
                                     child: Text(
                                       userInitial,
-                                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54),
+                                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
                                     ),
                                   ),
                           ),
@@ -2048,92 +2048,92 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFD55F5F),
+                              color: Colors.white,
                               shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), spreadRadius: 1, blurRadius: 3)],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                              border: Border.all(color: Color(0xFFD55F5F), width: 2),
                             ),
-                            child: const Icon(Icons.edit, color: Colors.white, size: 18),
+                            child: const Icon(Icons.edit, size: 20, color: Color(0xFFD55F5F)),
                           ),
                         ),
                       ],
                     ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Name
+                    const SizedBox(height: 18),
                     Text(
                       userName,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, fontFamily: defaultFontFamily),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Archivo'),
                     ),
-                    
                     const SizedBox(height: 4),
-                    
-                    // Email
                     Text(
                       userEmail,
-                      style: const TextStyle(fontSize: 14, color: Colors.black54, fontFamily: defaultFontFamily),
+                      style: const TextStyle(fontSize: 15, color: Colors.black54, fontFamily: 'Archivo'),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      userPhone,
+                      style: const TextStyle(fontSize: 15, color: Colors.black54, fontFamily: 'Archivo'),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDF9F7),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader("Preferences"),
+                          const SizedBox(height: 8),
+                          _buildSettingItem(
+                            icon: Icons.tune,
+                            title: "Change Preferences",
+                            onTap: _navigateToChangePreferences,
+                          ),
+                          _buildSettingItem(
+                            icon: Icons.person_outline,
+                            title: "My Information",
+                            onTap: _navigateToMyInformation,
+                          ),
+                          _buildSettingItem(
+                            icon: Icons.lock_outline,
+                            title: "Change Password",
+                            onTap: _navigateToChangePassword,
+                          ),
+                          _buildSettingItem(
+                            icon: Icons.feedback_outlined,
+                            title: "Send Feedback",
+                            onTap: _navigateToFeedback,
+                          ),
+                          _buildSettingItem(
+                            icon: Icons.help_outline,
+                            title: "Help Center",
+                            onTap: _openHelpCenter,
+                          ),
+                          _buildSettingItem(
+                            icon: Icons.logout,
+                            title: "Sign Out",
+                            onTap: _confirmSignOut,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              
-              const SizedBox(height: 30),
-              
-              // Account Settings Section
-              _buildSectionHeader('Account Settings'),
-              _buildSettingItem(
-                icon: Icons.person_outline, 
-                title: 'My Information',
-                subtitle: userPhone,
-                onTap: () => _navigateToMyInformation(),
-              ),
-              _buildSettingItem(
-                icon: Icons.lock_outline, 
-                title: 'Password',
-                subtitle: '********',
-                onTap: () => _navigateToChangePassword(),
-              ),
-              
-              // App Settings Section
-              _buildSectionHeader('App Settings'),
-              _buildSettingItem(
-                icon: Icons.tune, 
-                title: 'Preferences',
-                subtitle: '$fitPreference · $lifestylePreferences',
-                onTap: () => _navigateToChangePreferences(),
-              ),
-              
-              // Help & Support Section
-              _buildSectionHeader('Help & Support'),
-              _buildSettingItem(
-                icon: Icons.feedback_outlined, 
-                title: 'Send Feedback',
-                onTap: () => _navigateToFeedback(),
-              ),
-              _buildSettingItem(
-                icon: Icons.help_outline, 
-                title: 'Help Center',
-                onTap: () => _openHelpCenter(),
-              ),
-              
-              // Sign Out
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: ElevatedButton(
-                  onPressed: _confirmSignOut,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[50],
-                    foregroundColor: Colors.red,
-                    elevation: 0,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Sign Out', style: TextStyle(fontFamily: defaultFontFamily)),
-                ),
-              ),
-              
-              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -2146,13 +2146,13 @@ class _ProfilePageState extends State<ProfilePage> {
   // Helper methods for the ProfilePage
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 20.0, bottom: 8.0),
+      padding: const EdgeInsets.only(left: 4.0, right: 4.0, top: 20.0, bottom: 8.0),
       child: Text(
         title,
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.black54,
+          color: Color(0xFFD55F5F),
           fontFamily: 'Archivo',
         ),
       ),
@@ -2169,10 +2169,10 @@ class _ProfilePageState extends State<ProfilePage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.grey[200],
+          color: const Color(0xFFF6F2EF),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: Colors.black87),
+        child: Icon(icon, color: Color(0xFFD55F5F)),
       ),
       title: Text(
         title,
@@ -2186,14 +2186,14 @@ class _ProfilePageState extends State<ProfilePage> {
           ? Text(
               subtitle,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: Colors.black54,
                 fontFamily: 'Archivo',
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )
           : null,
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD55F5F)),
       onTap: onTap,
     );
   }
@@ -2209,16 +2209,19 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        backgroundColor: const Color(0xFFFDF9F7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Sign Out', style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black)),
+        content: const Text('Are you sure you want to sign out?', style: TextStyle(fontFamily: 'Archivo', fontSize: 16, color: Colors.black)),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Archivo', color: Colors.grey, fontWeight: FontWeight.w500)),
           ),
           TextButton(
             onPressed: _signOut,
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+            child: const Text('Sign Out', style: TextStyle(fontFamily: 'Archivo', color: Color(0xFFD55F5F), fontWeight: FontWeight.bold)),
           ),
         ],
       ),

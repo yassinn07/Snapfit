@@ -84,9 +84,9 @@ class _MyInformationPageState extends State<MyInformationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F2EF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF6F2EF),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -99,7 +99,7 @@ class _MyInformationPageState extends State<MyInformationPage> {
             fontSize: 25,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.02 * 25,
-            color: Colors.black
+            color: Colors.black,
           ),
         ),
         centerTitle: true,
@@ -138,7 +138,7 @@ class _MyInformationPageState extends State<MyInformationPage> {
                   child: ElevatedButton(
                     onPressed: _saveUserInfo,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFFD55F5F),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

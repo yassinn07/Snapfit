@@ -89,12 +89,18 @@ class _MyShopPageState extends State<MyShopPage> {
 
   @override
   Widget build(BuildContext context) {
+    const String fontFamily = 'Archivo';
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F1EE),
       appBar: AppBar(
-        title: const Text('My Shop'),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: const Text('My Shop', style: TextStyle(fontFamily: fontFamily, color: Colors.black, fontWeight: FontWeight.w600)),
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite),
+            color: Colors.black,
             onPressed: () {
               Navigator.push(
                 context,
@@ -115,7 +121,7 @@ class _MyShopPageState extends State<MyShopPage> {
                     children: [
                       Icon(Icons.favorite_border, size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
-                      Text('No items yet', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                      Text('No items yet', style: TextStyle(fontSize: 18, color: Colors.grey[600], fontFamily: fontFamily)),
                     ],
                   ),
                 )
@@ -132,9 +138,11 @@ class _MyShopPageState extends State<MyShopPage> {
                     final item = _items[index];
                     final isFavorite = _favoriteIds.contains(item['id'].toString());
                     return Card(
-                      elevation: 2,
+                      elevation: 4,
+                      color: Colors.white,
+                      shadowColor: Colors.black.withOpacity(0.07),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +151,7 @@ class _MyShopPageState extends State<MyShopPage> {
                             child: Stack(
                               children: [
                                 ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                   child: item['image_url'] != null && item['image_url'].toString().isNotEmpty
                                       ? Image.network(
                                           item['image_url'],
@@ -176,20 +184,20 @@ class _MyShopPageState extends State<MyShopPage> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: const EdgeInsets.all(10.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   item['name'] ?? 'Unknown Item',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: fontFamily, color: Colors.black),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  item['price'] != null ? '\$24${item['price'].toString()}' : '',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                  item['price'] != null ? '\$${item['price'].toString()}' : '',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13, fontFamily: fontFamily),
                                 ),
                               ],
                             ),
