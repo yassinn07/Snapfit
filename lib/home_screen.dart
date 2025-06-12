@@ -22,9 +22,10 @@ import 'ai_stylist_page.dart';
 // ----- Main Navigation Screen -----
 
 class HomeScreen extends StatefulWidget {
-  final String token; // ✅ Add this
+  final String token;
+  final int userId;
 
-  const HomeScreen({super.key, required this.token}); // ✅ Update constructor
+  const HomeScreen({super.key, required this.token, required this.userId});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -182,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
       ),
-      MyShopPage(token: widget.token),
+      MyShopPage(token: widget.token, userId: widget.userId),
       AIStylistPage(),
       const ClosetPage(),
       ProfilePage(
@@ -367,7 +368,7 @@ class _HomePageState extends State<HomePage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => MyShopPage(token: homeScreenState.widget.token!),
+          builder: (context) => MyShopPage(token: homeScreenState.widget.token!, userId: homeScreenState.widget.userId),
         ),
       );
     }
@@ -666,7 +667,8 @@ class _HomePageState extends State<HomePage> {
 // --- MyShopPage ---
 class MyShopPage extends StatefulWidget {
   final String token;
-  const MyShopPage({required this.token, super.key});
+  final int userId;
+  const MyShopPage({required this.token, required this.userId, super.key});
 
   @override
   State<MyShopPage> createState() => _MyShopPageState();
@@ -729,6 +731,7 @@ class _MyShopPageState extends State<MyShopPage> {
           filterTitle: title,
           filterType: type,
           token: widget.token,
+          userId: widget.userId,
         ),
       ),
     );
@@ -2013,7 +2016,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           onTap: _changeProfilePicture,
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundColor: const Color(0xFFF6F2EF),
+                            backgroundColor: Colors.white, // Make the background white if no image
                             child: imageUrl != null && imageUrl.isNotEmpty
                                 ? ClipOval(
                                     child: Image.network(
@@ -2096,7 +2099,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionHeader("Preferences"),
+                          _buildSectionHeader("Settings"),
                           const SizedBox(height: 8),
                           _buildSettingItem(
                             icon: Icons.tune,
@@ -2117,11 +2120,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icons.feedback_outlined,
                             title: "Send Feedback",
                             onTap: _navigateToFeedback,
-                          ),
-                          _buildSettingItem(
-                            icon: Icons.help_outline,
-                            title: "Help Center",
-                            onTap: _openHelpCenter,
                           ),
                           _buildSettingItem(
                             icon: Icons.logout,
@@ -2195,13 +2193,6 @@ class _ProfilePageState extends State<ProfilePage> {
           : null,
       trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD55F5F)),
       onTap: onTap,
-    );
-  }
-
-  void _openHelpCenter() {
-    // Open help center webpage or in-app support
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Help Center feature coming soon')),
     );
   }
 

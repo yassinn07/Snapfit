@@ -343,7 +343,6 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print('Error saving preferences: $e');
       setState(() {
         _isLoading = false;
       });

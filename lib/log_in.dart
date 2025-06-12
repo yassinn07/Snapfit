@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'sign_up.dart';
 import 'home_screen.dart';
 import 'config.dart';
+import 'services/profile_service.dart';
+import 'brand_home_screen.dart'; // Will be created next
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,15 +52,23 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         // Successful login
         final accessToken = responseData['access_token'];
-        final tokenType = responseData['token_type'];
-
-        // Navigate to home screen with the token
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(token: accessToken),
-          ),
-        );
+        final profileService = ProfileService(token: accessToken);
+        final userProfile = await profileService.getUserProfile();
+        if (userProfile.isBrand) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BrandHomeScreen(token: accessToken),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(token: accessToken, userId: userProfile.id),
+            ),
+          );
+        }
       } else {
         // Handle error
         String errorMessage = 'Login failed';

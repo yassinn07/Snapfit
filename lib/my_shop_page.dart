@@ -4,7 +4,8 @@ import 'services/profile_service.dart';
 
 class MyShopPage extends StatefulWidget {
   final String? token;
-  const MyShopPage({Key? key, this.token}) : super(key: key);
+  final int userId;
+  const MyShopPage({Key? key, this.token, required this.userId}) : super(key: key);
 
   @override
   State<MyShopPage> createState() => _MyShopPageState();

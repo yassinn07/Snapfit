@@ -193,7 +193,7 @@ class _LikedItemsScreenState extends State<LikedItemsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ItemScreen(item: shopItem, token: widget.token),
+                            builder: (context) => ItemScreen(item: shopItem, token: widget.token, userId: 0),
                           ),
                         );
                       },

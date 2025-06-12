@@ -502,7 +502,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ItemScreen(item: item),
+            builder: (context) => ItemScreen(item: item, userId: 0),
           ),
         );
       },

@@ -49,11 +49,13 @@ class FilteredShopPage extends StatefulWidget {
   final String filterTitle; // e.g., "Clothing", "Dodici"
   final FilterType filterType; // To know how to filter
   final String? token; // Changed to nullable String?
+  final int userId; // userId is now required
 
   const FilteredShopPage({
     required this.filterTitle,
     required this.filterType,
     this.token, // Make token optional
+    required this.userId,
     super.key,
   });
 
@@ -109,7 +111,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
           _isLoading = false;
         });
       }
-      print('Error fetching items: $e');
     }
   }
 
@@ -165,7 +166,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
         });
       }
     } catch (e) {
-      print('Error loading liked status: $e');
     }
   }
 
@@ -217,7 +217,6 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
         SnackBar(content: Text(result ?? 'AI Match check completed')),
       );
     } catch (e) {
-      print('Error checking AI match: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error checking AI match: $e')),
       );
@@ -236,19 +235,16 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Could not open store URL: ${item.purchaseLink}')),
             );
-            debugPrint('Failed to launch \\${item.purchaseLink}');
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not open store URL: ${item.purchaseLink}')),
           );
-          debugPrint('Cannot launch \\${item.purchaseLink}');
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error opening store URL: $e')),
         );
-        debugPrint('Exception launching \\${item.purchaseLink}: $e');
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -412,11 +408,20 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     VoidCallback? onBagTap})
   {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        // Log item click event
+        if (widget.token != null) {
+          await ProfileService.logItemEvent(
+            itemId: int.parse(item.id),
+            userId: widget.userId,
+            eventType: 'item_click',
+            token: widget.token!,
+          );
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ItemScreen(item: item, token: widget.token),
+            builder: (context) => ItemScreen(item: item, token: widget.token, userId: widget.userId),
           ),
         );
       },
@@ -455,15 +460,18 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                   Positioned(bottom: 8, right: 8,
                       child: _buildItemOverlayButton(
                           icon: Icons.shopping_bag_outlined,
-                          onTap: () => _visitStore(item),
-                          // Add a comment to remind about permissions for Android and iOS
-                          // Android: Add <uses-permission android:name="android.permission.INTERNET" /> to AndroidManifest.xml
-                          // iOS: Add LSApplicationQueriesSchemes to Info.plist if needed for universal links.
-                          // No code change needed unless url_launcher is not in pubspec.yaml.
-                          // If not, add to pubspec.yaml:
-                          // dependencies:
-                          //   url_launcher: ^6.1.7
-                          // Then run: flutter pub get
+                          onTap: () async {
+                            // Log visit store event
+                            if (widget.token != null) {
+                              await ProfileService.logItemEvent(
+                                itemId: int.parse(item.id),
+                                userId: widget.userId,
+                                eventType: 'visit_store',
+                                token: widget.token!,
+                              );
+                            }
+                            _visitStore(item);
+                          },
                       )
                   ),
                 ],

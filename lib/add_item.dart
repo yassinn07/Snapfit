@@ -70,7 +70,6 @@ class _AddItemPageState extends State<AddItemPage> {
         _userGender = profile.gender;
       });
     } catch (e) {
-      print('Failed to fetch user gender: $e');
       setState(() {
         _userGender = null;
       });
@@ -115,7 +114,7 @@ class _AddItemPageState extends State<AddItemPage> {
       color: _colorController.text,
       size: _sizeController.text,
       occasion: _occasion ?? '',
-      brand: _brandController.text,
+      brand: '..',
       gender: _userGender ?? '',
       imagePath: _imageFile!.path,
     );
@@ -516,18 +515,6 @@ class _AddItemPageState extends State<AddItemPage> {
                     iconEnabledColor: mainRed,
                       ),
                       const SizedBox(height: 18),
-                      TextFormField(
-                        controller: _brandController,
-                        style: const TextStyle(fontFamily: fontFamily),
-                        decoration: const InputDecoration(
-                          labelText: 'Brand',
-                      prefixIcon: Icon(Icons.store_mall_directory_outlined, color: mainRed),
-                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                          border: themedBorder,
-                          focusedBorder: themedBorder,
-                        ),
-                      ),
-                  const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: _isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(

@@ -6,8 +6,9 @@ import 'services/brand_service.dart'; // Import for backend brand data
 
 class LocalBrandsPage extends StatefulWidget {
   final String? token;
+  final int userId;
   
-  const LocalBrandsPage({this.token, super.key});
+  const LocalBrandsPage({this.token, required this.userId, super.key});
 
   @override
   State<LocalBrandsPage> createState() => _LocalBrandsPageState();
@@ -133,6 +134,7 @@ class _LocalBrandsPageState extends State<LocalBrandsPage> {
                                 filterTitle: name, // Pass brand name as filter title
                                 filterType: FilterType.brand, // Specify filter type
                                 token: widget.token, // Pass the token
+                                userId: widget.userId, // Pass the userId
                               )),
                             );
                           }

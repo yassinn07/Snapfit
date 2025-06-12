@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 
 class UserProfile {
+  final int id;
   final String name;
   final String email;
   final String phone;
@@ -14,8 +15,10 @@ class UserProfile {
   final List<String> preferredColors;
   final List<String> excludedCategories;
   final String gender;
+  final bool isBrand;
   
   UserProfile({
+    required this.id,
     required this.name,
     required this.email,
     required this.phone,
@@ -27,10 +30,12 @@ class UserProfile {
     required this.preferredColors,
     required this.excludedCategories,
     required this.gender,
+    required this.isBrand,
   });
   
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
+      id: json['id'] ?? 0,
       name: json['user_name'] ?? json['name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
@@ -42,6 +47,7 @@ class UserProfile {
       preferredColors: List<String>.from(json['preferred_colors'] ?? []),
       excludedCategories: List<String>.from(json['excluded_categories'] ?? []),
       gender: json['gender'] ?? '',
+      isBrand: json['brand'] ?? false,
     );
   }
   
@@ -58,6 +64,7 @@ class UserProfile {
       'preferred_colors': preferredColors,
       'excluded_categories': excludedCategories,
       'gender': gender,
+      'brand': isBrand,
     };
   }
 }
@@ -78,7 +85,6 @@ class ProfileService {
           'Authorization': 'Bearer $token',
         },
       );
-      
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         return UserProfile.fromJson(data);
@@ -86,7 +92,6 @@ class ProfileService {
         throw Exception('Failed to load profile: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching user profile: $e');
       throw Exception('Failed to load user profile: $e');
     }
   }
@@ -125,7 +130,6 @@ class ProfileService {
         throw Exception('Failed to update preferences: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error updating preferences: $e');
       throw Exception('Failed to update preferences: $e');
     }
   }
@@ -156,7 +160,6 @@ class ProfileService {
         throw Exception('Failed to update user info: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error updating user info: $e');
       throw Exception('Failed to update user info: $e');
     }
   }
@@ -182,7 +185,6 @@ class ProfileService {
       
       return response.statusCode == 200;
     } catch (e) {
-      print('Error updating password: $e');
       throw Exception('Failed to update password: $e');
     }
   }
@@ -204,7 +206,6 @@ class ProfileService {
       
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error sending feedback: $e');
       throw Exception('Failed to send feedback: $e');
     }
   }
@@ -231,7 +232,6 @@ class ProfileService {
       final profile = await getUserProfile();
       return profile.imageUrl;
     } catch (e) {
-      print('Error getting profile picture: $e');
       return null;
     }
   }
@@ -262,7 +262,6 @@ class ProfileService {
       }
       return {'success': false};
     } catch (e) {
-      print('Error uploading profile picture: $e');
       throw Exception('Failed to upload profile picture: $e');
     }
   }
@@ -285,7 +284,6 @@ class ProfileService {
         throw Exception('Failed to load favorites: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching favorites: $e');
       throw Exception('Failed to load favorites: $e');
     }
   }
@@ -303,7 +301,6 @@ class ProfileService {
       
       return response.statusCode == 200;
     } catch (e) {
-      print('Error toggling favorite: $e');
       throw Exception('Failed to toggle favorite: $e');
     }
   }
@@ -321,7 +318,6 @@ class ProfileService {
       
       return response.statusCode == 200;
     } catch (e) {
-      print('Error removing favorite: $e');
       throw Exception('Failed to remove favorite: $e');
     }
   }
@@ -342,8 +338,34 @@ class ProfileService {
         throw Exception('Failed to load preferences: \\${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching user preferences: $e');
       throw Exception('Failed to load user preferences: $e');
+    }
+  }
+
+  static Future<void> logItemEvent({
+    required int itemId,
+    required int userId,
+    required String eventType,
+    required String token,
+  }) async {
+    final url = Uri.parse('${Config.apiUrl}/brands/item_event');
+    print('Posting event: item_id=[1m$itemId[0m, user_id=[1m$userId[0m, event_type=[1m$eventType[0m, token=[1m$token[0m to $url');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'item_id': itemId,
+          'user_id': userId,
+          'event_type': eventType,
+        }),
+      );
+      print('Event POST response: [1m${response.statusCode}[0m ${response.body}');
+    } catch (e) {
+      print('Error posting event: $e');
     }
   }
 } 

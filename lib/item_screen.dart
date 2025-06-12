@@ -6,6 +6,7 @@ import 'services/shop_service.dart'; // Import ShopService for fetching items
 import 'package:url_launcher/url_launcher.dart';
 import 'services/ml_outfit_service.dart'; // Import ML outfit service
 import 'services/profile_service.dart'; // Import ProfileService for favorite management
+import 'package:shared_preferences/shared_preferences.dart'; // For userId
 
 // Placeholder for related item data model (can be the same as ShopItem)
 // TODO: Replace with your actual data structure if different
@@ -14,9 +15,10 @@ typedef RelatedItem = ShopItem;
 class ItemScreen extends StatefulWidget {
   final ShopItem item;
   final String? token;
+  final int userId;
   final void Function(bool isFavorite)? onFavoriteChanged;
 
-  const ItemScreen({required this.item, this.token, this.onFavoriteChanged, super.key});
+  const ItemScreen({required this.item, this.token, required this.userId, this.onFavoriteChanged, super.key});
 
   @override
   State<ItemScreen> createState() => _ItemScreenState();
@@ -162,6 +164,15 @@ class _ItemScreenState extends State<ItemScreen> {
   }
 
   void _visitStore() async {
+    // Log visit store event using userId from widget
+    if (widget.token != null) {
+      await ProfileService.logItemEvent(
+        itemId: int.parse(widget.item.id),
+        userId: widget.userId,
+        eventType: 'visit_store',
+        token: widget.token!,
+      );
+    }
     // Open the purchase link URL if available
     if (widget.item.purchaseLink != null && widget.item.purchaseLink!.isNotEmpty) {
       final Uri url = Uri.parse(widget.item.purchaseLink!);
