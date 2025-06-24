@@ -31,6 +31,8 @@ class _AddItemPageState extends State<AddItemPage> {
   bool _showImagePreview = false;
   bool _isClassifying = false;
   String? _userGender;
+  int? _uploadedItemId; // Store the uploaded item ID for classification
+  String? _maskedImageUrl; // Store the masked image URL for preview
 
   final List<String> _categories = ['Upper Body', 'Lower Body', 'Shoes'];
   final Map<String, List<String>> _subcategories = {
@@ -83,6 +85,8 @@ class _AddItemPageState extends State<AddItemPage> {
       setState(() {
         _imageFile = File(pickedFile.path);
         _showImagePreview = true;
+        _uploadedItemId = null; // Reset uploaded item ID when new image is picked
+        _maskedImageUrl = null; // Reset masked image URL when new image is picked
       });
     }
   }
@@ -91,6 +95,8 @@ class _AddItemPageState extends State<AddItemPage> {
     setState(() {
       _imageFile = null;
       _showImagePreview = false;
+      _uploadedItemId = null;
+      _maskedImageUrl = null;
     });
   }
 
@@ -98,6 +104,32 @@ class _AddItemPageState extends State<AddItemPage> {
     setState(() {
       _showImagePreview = false;
     });
+  }
+
+  Future<bool> _uploadImageFirst() async {
+    if (_imageFile == null) return false;
+    
+    setState(() { _isLoading = true; });
+    try {
+      final closetService = ClosetService(token: widget.token);
+      final uploadResult = await closetService.addItemWithImage(_imageFile!.path);
+      
+      if (uploadResult != null && uploadResult['id'] != null) {
+        setState(() {
+          _uploadedItemId = uploadResult['id'];
+          _maskedImageUrl = uploadResult['url']; // Store the masked image URL
+        });
+        return true;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image.')));
+        return false;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error uploading image: $e')));
+      return false;
+    } finally {
+      setState(() { _isLoading = false; });
+    }
   }
 
   Future<void> _submit() async {
@@ -128,12 +160,22 @@ class _AddItemPageState extends State<AddItemPage> {
   }
 
   Future<void> _classifyTopwear() async {
-    if (_imageFile == null) return;
+    if (_uploadedItemId == null) {
+      // First upload the image if not already uploaded
+      final uploadSuccess = await _uploadImageFirst();
+      if (!uploadSuccess) return;
+    }
+    
     setState(() { _isClassifying = true; });
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-topwear'));
-      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
-      var response = await request.send();
+      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-topwear?item_id=$_uploadedItemId');
+      final request = http.Request('POST', url);
+      request.headers.addAll({
+        'Authorization': 'Bearer ${widget.token}',
+        'Content-Type': 'application/json',
+      });
+      
+      final response = await request.send();
       if (response.statusCode == 200) {
         var respStr = await response.stream.bytesToString();
         var data = jsonDecode(respStr);
@@ -158,12 +200,22 @@ class _AddItemPageState extends State<AddItemPage> {
   }
 
   Future<void> _classifyBottomwear() async {
-    if (_imageFile == null) return;
+    if (_uploadedItemId == null) {
+      // First upload the image if not already uploaded
+      final uploadSuccess = await _uploadImageFirst();
+      if (!uploadSuccess) return;
+    }
+    
     setState(() { _isClassifying = true; });
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-bottomwear'));
-      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
-      var response = await request.send();
+      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-bottomwear?item_id=$_uploadedItemId');
+      final request = http.Request('POST', url);
+      request.headers.addAll({
+        'Authorization': 'Bearer ${widget.token}',
+        'Content-Type': 'application/json',
+      });
+      
+      final response = await request.send();
       if (response.statusCode == 200) {
         var respStr = await response.stream.bytesToString();
         var data = jsonDecode(respStr);
@@ -188,12 +240,22 @@ class _AddItemPageState extends State<AddItemPage> {
   }
 
   Future<void> _classifyShoes() async {
-    if (_imageFile == null) return;
+    if (_uploadedItemId == null) {
+      // First upload the image if not already uploaded
+      final uploadSuccess = await _uploadImageFirst();
+      if (!uploadSuccess) return;
+    }
+    
     setState(() { _isClassifying = true; });
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/ai/classify-shoes'));
-      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
-      var response = await request.send();
+      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-shoes?item_id=$_uploadedItemId');
+      final request = http.Request('POST', url);
+      request.headers.addAll({
+        'Authorization': 'Bearer ${widget.token}',
+        'Content-Type': 'application/json',
+      });
+      
+      final response = await request.send();
       if (response.statusCode == 200) {
         var respStr = await response.stream.bytesToString();
         var data = jsonDecode(respStr);
@@ -244,6 +306,31 @@ class _AddItemPageState extends State<AddItemPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // --- Info note for best photo ---
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.yellow[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange[800], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Place the clothing item on a flat surface and take a clear photo',
+                      style: TextStyle(
+                        color: Colors.orange[900],
+                        fontSize: 14,
+                        fontFamily: fontFamily,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Container(
               height: 500,
               width: double.infinity,
@@ -418,6 +505,85 @@ class _AddItemPageState extends State<AddItemPage> {
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 20),
+                  
+                  // Masked Image Preview Container
+                  if (_maskedImageUrl != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[300]!, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.auto_fix_high, color: mainRed, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Background Removed Image',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                  fontFamily: fontFamily,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!, width: 1),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                'http://10.0.2.2:8000$_maskedImageUrl',
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      color: mainRed,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.error_outline, color: Colors.grey[400], size: 40),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Failed to load image',
+                                          style: TextStyle(color: Colors.grey[600], fontFamily: fontFamily),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  
                   const Divider(height: 32, thickness: 1.2),
                       TextFormField(
                         controller: _nameController,

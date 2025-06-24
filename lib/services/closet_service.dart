@@ -155,7 +155,7 @@ class ClosetService {
     }
   }
 
-  Future<bool> addItemWithImage(String imagePath) async {
+  Future<Map<String, dynamic>?> addItemWithImage(String imagePath) async {
     try {
       final url = Uri.parse('${Config.apiUrl}/clothes/upload');
       final request = http.MultipartRequest('POST', url);
@@ -171,15 +171,16 @@ class ClosetService {
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('Item uploaded successfully');
-        return true;
+        final responseData = json.decode(responseString);
+        return responseData; // Return the response data containing id, path, url
       } else {
         print('Failed to upload item: ${response.statusCode}');
         print('Response: $responseString');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Error uploading item with image: $e');
-      return false;
+      return null;
     }
   }
 
