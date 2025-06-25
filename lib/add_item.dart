@@ -55,7 +55,7 @@ class _AddItemPageState extends State<AddItemPage> {
   // --- End of Adjustments ---
 
   // Add a step variable to control the flow
-  int _step = 0; // 0: image, 1: category, 2: details
+  int _step = 0; // 0: image, 1: details (removed category selection step)
   String? _selectedCategory;
 
   @override
@@ -119,6 +119,26 @@ class _AddItemPageState extends State<AddItemPage> {
           _uploadedItemId = uploadResult['id'];
           _maskedImageUrl = uploadResult['url']; // Store the masked image URL
         });
+        
+        // Handle classification results from upload
+        if (uploadResult['classification'] != null) {
+          final classification = uploadResult['classification'];
+          setState(() {
+            _category = classification['category'];
+            _selectedCategory = classification['category'];
+          });
+          
+          // Call the appropriate specific classifier based on subcategory prediction
+          final subcategory = classification['subcategory'];
+          if (subcategory == 'Topwear') {
+            await _classifyTopwear();
+          } else if (subcategory == 'Bottomwear') {
+            await _classifyBottomwear();
+          } else if (subcategory == 'Shoes') {
+            await _classifyShoes();
+          }
+        }
+        
         return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image.')));
@@ -389,7 +409,13 @@ class _AddItemPageState extends State<AddItemPage> {
             if (_imageFile != null) ...[
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => setState(() => _step = 1),
+                onPressed: () async {
+                  // Upload image and auto-classify, then go to details
+                  final success = await _uploadImageFirst();
+                  if (success) {
+                    setState(() => _step = 1);
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: mainRed,
                   foregroundColor: Colors.white,
@@ -397,96 +423,16 @@ class _AddItemPageState extends State<AddItemPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
                   minimumSize: const Size(180, 48),
                 ),
-                child: const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
+                child: _isLoading 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
               ),
             ],
           ],
         ),
       );
-    } else if (_step == 1) {
-      // Step 2: Category selection (modern card/pill style with icons)
-      return Padding(
-        padding: const EdgeInsets.only(top: 32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Select Category',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: fontFamily),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'What type of item are you adding?',
-              style: TextStyle(fontSize: 16, color: Colors.black54, fontFamily: fontFamily),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ..._categories.map((cat) {
-              IconData icon;
-              switch (cat) {
-                case 'Upper Body': icon = Icons.checkroom; break;
-                case 'Lower Body': icon = Icons.shopping_bag; break;
-                case 'Shoes': icon = Icons.directions_run; break;
-                default: icon = Icons.category;
-              }
-              final isSelected = _category == cat;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 24.0),
-                child: Material(
-                  elevation: isSelected ? 4 : 1,
-                  borderRadius: BorderRadius.circular(16),
-                  color: isSelected ? mainRed : Colors.white,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () async {
-                      setState(() {
-                        _selectedCategory = cat;
-                        _category = cat;
-                        _step = 2;
-                      });
-                      // Call the ML model for autofill
-                      if (_imageFile != null) {
-                        if (cat == 'Upper Body') {
-                          await _classifyTopwear();
-                        } else if (cat == 'Lower Body') {
-                          await _classifyBottomwear();
-                        } else if (cat == 'Shoes') {
-                          await _classifyShoes();
-                        }
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 18),
-                      child: Row(
-                        children: [
-                          Icon(icon, color: isSelected ? Colors.white : mainRed, size: 28),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            child: Text(
-                              cat,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : Colors.black,
-                                fontFamily: fontFamily,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle, color: Colors.white, size: 22),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-      );
     } else {
-      // Step 3: Details form (modern card with icons and divider)
+      // Step 2: Details form (modern card with icons and divider)
       return Padding(
         padding: const EdgeInsets.only(top: 32.0),
         child: Card(
@@ -585,6 +531,37 @@ class _AddItemPageState extends State<AddItemPage> {
                   ],
                   
                   const Divider(height: 32, thickness: 1.2),
+                  
+                  // Category Dropdown (auto-filled based on classification)
+                  DropdownButtonFormField<String>(
+                    value: _category,
+                    items: _categories
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category, style: const TextStyle(fontFamily: fontFamily)),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _category = val;
+                        _selectedCategory = val;
+                        _subcategory = null; // Reset subcategory when category changes
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      prefixIcon: Icon(Icons.category, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null ? 'Please select a category' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(fontFamily: fontFamily),

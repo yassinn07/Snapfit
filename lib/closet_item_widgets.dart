@@ -128,7 +128,7 @@ class ClosetItemDetailsDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.subcategory,
+                  item.name,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -212,108 +212,90 @@ Widget buildClosetItemCard({
                       ? item.imageUrl!
                       : 'http://10.0.2.2:8000/static/${item.imageUrl!}',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.checkroom, size: 60, color: Colors.grey),
-                        const SizedBox(height: 8),
-                        Text(
-                          item.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: fontFamily,
-                            fontSize: 14,
-                            color: Colors.grey.shade600
-                          ),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.checkroom, size: 60, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.color,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: fontFamily,
+                                fontSize: 12,
+                                color: Colors.grey
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          item.color,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: fontFamily,
-                            fontSize: 12,
-                            color: Colors.grey
-                          ),
-                        ),
-                      ],
+                      ),
                     )
                   )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.checkroom, size: 60, color: Colors.grey),
-                      const SizedBox(height: 8),
-                      Text(
-                        item.name,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: fontFamily,
-                          fontSize: 14,
-                          color: Colors.grey.shade600
-                        ),
+                : Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.checkroom, size: 60, color: Colors.grey),
+                          const SizedBox(height: 8),
+                          Text(
+                            item.color,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: fontFamily,
+                              fontSize: 12,
+                              color: Colors.grey
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        item.color,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: fontFamily,
-                          fontSize: 12,
-                          color: Colors.grey
-                        ),
-                      ),
-                    ],
+                    ),
                   )
             )
+          ),
+          // Name overlay at the bottom
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.45),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+              ),
+              child: Text(
+                item.name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: -0.02 * 15,
+                  shadows: [Shadow(blurRadius: 2, color: Colors.black26, offset: Offset(0, 1))],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
           // Delete button
           Positioned(
             bottom: 8,
             right: 8,
             child: buildItemCardOverlayButton(
-              onTap: () async {
-                final shouldDelete = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    title: const Text('Delete Item', style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold)),
-                    content: const Text('Are you sure you want to delete this item?', style: TextStyle(fontFamily: 'Archivo')),
-                    actionsAlignment: MainAxisAlignment.end,
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        style: TextButton.styleFrom(
-                          backgroundColor: const Color(0xFFD55F5F),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold)
-                        ),
-                        child: const Text('Yes'),
-                      ),
-                      OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFD55F5F), width: 1.5),
-                          foregroundColor: const Color(0xFFD55F5F),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                          textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold)
-                        ),
-                        child: const Text('No'),
-                      ),
-                    ],
-                  ),
-                );
-                if (shouldDelete == true && onDeleteTap != null) {
-                  onDeleteTap();
-                }
-              },
-              icon: Icons.delete_outline
-            )
+              icon: Icons.delete_outline,
+              onTap: onDeleteTap,
+            ),
           ),
-        ]
-      )
-    )
+        ],
+      ),
+    ),
   );
 }
 

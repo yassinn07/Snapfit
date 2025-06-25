@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'ai_stylist_camera_screen.dart';
@@ -68,6 +69,11 @@ class _AIStylistPageState extends State<AIStylistPage> {
   @override
   Widget build(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
+    // Set status bar to transparent
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ));
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
@@ -87,16 +93,16 @@ class _AIStylistPageState extends State<AIStylistPage> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/ai_stylist_screen_background.jpeg',
-                fit: BoxFit.cover,
-              ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/ai_stylist_screen_background.jpeg',
+              fit: BoxFit.cover,
             ),
-            Column(
+          ),
+          SafeArea(
+            child: Column(
               children: [
                 Expanded(
                   child: ListView.builder(
@@ -194,66 +200,38 @@ class _AIStylistPageState extends State<AIStylistPage> {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMessage(Map<String, String> entry, String fontFamily) {
-    bool isUser = entry['role'] == 'user';
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          if (!isUser)
-            Padding(
-              padding: const EdgeInsets.only(right: 6.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.smart_toy, color: Color(0xFFD55F5F)),
-              ),
+  Widget _buildMessage(Map<String, String> message, String fontFamily) {
+    final isUser = message['role'] == 'user';
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isUser ? const Color(0xFFD55F5F) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 2,
+              offset: Offset(0, 1),
             ),
-          Flexible(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUser ? Colors.pink[100] : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  topRight: Radius.circular(18),
-                  bottomLeft: Radius.circular(isUser ? 18 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 18),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Text(
-                entry['text'] ?? '',
-                style: TextStyle(
-                  fontFamily: fontFamily,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-              ),
-            ),
+          ],
+        ),
+        child: Text(
+          message['text'] ?? '',
+          style: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 16,
+            color: isUser ? Colors.white : Colors.black,
           ),
-          if (isUser)
-            Padding(
-              padding: const EdgeInsets.only(left: 6.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.pink[100],
-                child: Icon(Icons.person, color: Colors.black),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
