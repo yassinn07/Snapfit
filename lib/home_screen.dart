@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'add_item.dart'; // Import for ClosetPage navigation
 import 'my_outfits.dart';
 import 'local_brands.dart';
@@ -206,9 +207,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (_selectedIndex != index) {
+      // Add haptic feedback
+      HapticFeedback.lightImpact();
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
@@ -227,19 +232,80 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex,
         children: pages,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: selectedColor,
-        unselectedItemColor: unselectedColor,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home, size: 30), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag, size: 30), label: "My Shop"),
-          BottomNavigationBarItem(icon: Icon(Icons.smart_toy, size: 30), label: "AI Stylist"),
-          BottomNavigationBarItem(icon: Icon(Icons.checkroom, size: 30), label: "Closet"),
-          BottomNavigationBarItem(icon: Icon(Icons.person, size: 30), label: "Profile"),
+      bottomNavigationBar: _buildModernNavigationBar(),
+    );
+  }
+
+  Widget _buildModernNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -2),
+          ),
         ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNavItem(0, Icons.home, "Home"),
+              _buildNavItem(1, Icons.shopping_bag, "My Shop"),
+              _buildNavItem(2, Icons.smart_toy, "AI Stylist"),
+              _buildNavItem(3, Icons.checkroom, "Closet"),
+              _buildNavItem(4, Icons.person, "Profile"),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _selectedIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onItemTapped(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+          decoration: BoxDecoration(
+            color: isSelected ? selectedColor.withOpacity(0.18) : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                padding: EdgeInsets.all(isSelected ? 8 : 0),
+                child: Icon(
+                  icon,
+                  size: isSelected ? 28 : 24,
+                  color: isSelected ? selectedColor : unselectedColor,
+                ),
+              ),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: TextStyle(
+                  fontFamily: 'Archivo',
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w400,
+                  color: isSelected ? selectedColor : unselectedColor,
+                ),
+                child: Text(label),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
