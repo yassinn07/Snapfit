@@ -184,7 +184,7 @@ class ClosetService {
     }
   }
 
-  Future<bool> addItemFull({
+  Future<ClosetItem?> addItemFull({
     required String name,
     required String category,
     required String subcategory,
@@ -194,6 +194,7 @@ class ClosetService {
     required String brand,
     required String gender,
     required String imagePath,
+    required int userId,
   }) async {
     try {
       final url = Uri.parse('${Config.apiUrl}/clothes/');
@@ -201,6 +202,7 @@ class ClosetService {
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
+      request.fields['user_id'] = userId.toString();
       request.fields['subtype'] = name; // or 'name' if backend expects that
       request.fields['apparel_type'] = category;
       request.fields['subtype'] = subcategory;
@@ -214,15 +216,17 @@ class ClosetService {
       final responseString = await response.stream.bytesToString();
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('Item uploaded successfully');
-        return true;
+        final responseData = json.decode(responseString);
+        // Return the actual item with database ID
+        return ClosetItem.fromJson(responseData);
       } else {
-        print('Failed to upload item: \\${response.statusCode}');
+        print('Failed to upload item: ${response.statusCode}');
         print('Response: $responseString');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Error uploading item with image: $e');
-      return false;
+      return null;
     }
   }
 } 

@@ -316,7 +316,7 @@ class _ItemScreenState extends State<ItemScreen> {
               borderRadius: BorderRadius.circular(10),
               // TODO: Replace placeholder with actual Image widget (CSS: image-removebg-preview (26) 2)
               child: item.imageUrl != null
-                  ? Image.network(item.imageUrl!, fit: BoxFit.contain, 
+                  ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain, 
                     errorBuilder: (context, error, stackTrace) => 
                       const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)))
                   : const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)),
@@ -738,6 +738,12 @@ class _ItemScreenState extends State<ItemScreen> {
         ),
       ),
     );
+  }
+
+  String _buildImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return '';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return 'http://10.0.2.2:8000/static/$imageUrl';
   }
 
 } // End _ItemScreenState

@@ -11,7 +11,8 @@ import 'services/profile_service.dart'; // Import profile service
 
 class AddItemPage extends StatefulWidget {
   final String token;
-  const AddItemPage({required this.token, super.key});
+  final int userId;
+  const AddItemPage({required this.token, required this.userId, super.key});
 
   @override
   State<AddItemPage> createState() => _AddItemPageState();
@@ -31,18 +32,22 @@ class _AddItemPageState extends State<AddItemPage> {
   bool _showImagePreview = false;
   bool _isClassifying = false;
   String? _userGender;
-  int? _uploadedItemId; // Store the uploaded item ID for classification
   String? _maskedImageUrl; // Store the masked image URL for preview
 
-  final List<String> _categories = ['Upper Body', 'Lower Body', 'Shoes'];
+  final List<String> _categories = ['Upper Body', 'Lower Body', 'Dress', 'Bags', 'Shoes'];
   final Map<String, List<String>> _subcategories = {
     'Upper Body': ['Jackets', 'Shirts', 'Sweaters', 'Tops', 'Tshirts'],
     'Lower Body': ['Jeans', 'Shorts', 'Skirts', 'Track Pants', 'Trousers'],
+    'Dress': ['Casual Dresses', 'Formal Dresses', 'Party Dresses'],
+    'Bags': ['Backpacks', 'Clutches', 'Totes'],
     'Shoes': ['Casual - Formal Shoes', 'Sandals', 'Sports Shoes'],
   };
   final List<String> _sizes = ['S', 'M', 'L', 'XL'];
   final List<String> _occasionOptions = ['Casual', 'Formal', 'Sports'];
   String? _occasion;
+
+  final List<String> _seasonOptions = ['Summer', 'Winter', 'All Year Long'];
+  String? _season;
 
   // --- Adjusted Theme-related Fields ---
   static const Color mainRed = Color(0xFFD55F5F);
@@ -85,7 +90,6 @@ class _AddItemPageState extends State<AddItemPage> {
       setState(() {
         _imageFile = File(pickedFile.path);
         _showImagePreview = true;
-        _uploadedItemId = null; // Reset uploaded item ID when new image is picked
         _maskedImageUrl = null; // Reset masked image URL when new image is picked
       });
     }
@@ -95,7 +99,6 @@ class _AddItemPageState extends State<AddItemPage> {
     setState(() {
       _imageFile = null;
       _showImagePreview = false;
-      _uploadedItemId = null;
       _maskedImageUrl = null;
     });
   }
@@ -108,37 +111,25 @@ class _AddItemPageState extends State<AddItemPage> {
 
   Future<bool> _uploadImageFirst() async {
     if (_imageFile == null) return false;
-    
+
     setState(() { _isLoading = true; });
     try {
-      final closetService = ClosetService(token: widget.token);
-      final uploadResult = await closetService.addItemWithImage(_imageFile!.path);
-      
-      if (uploadResult != null && uploadResult['id'] != null) {
+      // Upload image to get the masked image URL without creating database entry
+      final url = Uri.parse('http://10.0.2.2:8000/clothes/upload-image-only');
+      final request = http.MultipartRequest('POST', url);
+      request.headers.addAll({
+        'Authorization': 'Bearer ${widget.token}',
+      });
+      request.files.add(await http.MultipartFile.fromPath('image', _imageFile!.path));
+
+      final response = await request.send();
+      final responseString = await response.stream.bytesToString();
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = json.decode(responseString);
         setState(() {
-          _uploadedItemId = uploadResult['id'];
-          _maskedImageUrl = uploadResult['url']; // Store the masked image URL
+          _maskedImageUrl = responseData['url']; // Store the masked image URL
         });
-        
-        // Handle classification results from upload
-        if (uploadResult['classification'] != null) {
-          final classification = uploadResult['classification'];
-          setState(() {
-            _category = classification['category'];
-            _selectedCategory = classification['category'];
-          });
-          
-          // Call the appropriate specific classifier based on subcategory prediction
-          final subcategory = classification['subcategory'];
-          if (subcategory == 'Topwear') {
-            await _classifyTopwear();
-          } else if (subcategory == 'Bottomwear') {
-            await _classifyBottomwear();
-          } else if (subcategory == 'Shoes') {
-            await _classifyShoes();
-          }
-        }
-        
         return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image.')));
@@ -158,89 +149,67 @@ class _AddItemPageState extends State<AddItemPage> {
       return;
     }
     setState(() { _isLoading = true; });
-    final closetService = ClosetService(token: widget.token);
-    final success = await closetService.addItemFull(
-      name: _nameController.text,
-      category: _category!,
-      subcategory: _subcategory ?? '',
-      color: _colorController.text,
-      size: _sizeController.text,
-      occasion: _occasion ?? '',
-      brand: '..',
-      gender: _userGender ?? '',
-      imagePath: _imageFile!.path,
-    );
-    setState(() { _isLoading = false; });
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item added successfully!')));
-      Navigator.pop(context, true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
-    }
-  }
 
-  Future<void> _classifyTopwear() async {
-    if (_uploadedItemId == null) {
-      // First upload the image if not already uploaded
-      final uploadSuccess = await _uploadImageFirst();
-      if (!uploadSuccess) return;
-    }
-    
-    setState(() { _isClassifying = true; });
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-topwear?item_id=$_uploadedItemId');
-      final request = http.Request('POST', url);
-      request.headers.addAll({
-        'Authorization': 'Bearer ${widget.token}',
-        'Content-Type': 'application/json',
-      });
-      
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        var respStr = await response.stream.bytesToString();
-        var data = jsonDecode(respStr);
-        setState(() {
-          _subcategory = data['topwear'];
-          final occasion = data['occasion'];
-          if (_occasionOptions.contains(occasion)) {
-            _occasion = occasion;
-          } else {
-            _occasion = null;
-          }
-          _occasionController.text = _occasion ?? '';
-        });
+      print('AddItemPage token: \'${widget.token}\'');
+      final closetService = ClosetService(token: widget.token);
+      final newItem = await closetService.addItemFull(
+        name: _nameController.text,
+        category: _category!,
+        subcategory: _subcategory ?? '',
+        color: _colorController.text,
+        size: _sizeController.text,
+        occasion: _occasion ?? '',
+        brand: 'Unknown', // Default brand value since no brand field in form
+        gender: _userGender ?? '',
+        imagePath: _imageFile!.path,
+        userId: widget.userId,
+      );
+
+      if (newItem != null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item added successfully!')));
+        Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding item: $e')));
     } finally {
-      setState(() { _isClassifying = false; });
+      setState(() { _isLoading = false; });
     }
   }
 
-  Future<void> _classifyBottomwear() async {
-    if (_uploadedItemId == null) {
-      // First upload the image if not already uploaded
-      final uploadSuccess = await _uploadImageFirst();
-      if (!uploadSuccess) return;
-    }
-    
+  Future<void> _classifyItem() async {
+    if (_imageFile == null) return;
+
     setState(() { _isClassifying = true; });
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-bottomwear?item_id=$_uploadedItemId');
-      final request = http.Request('POST', url);
+      // Upload image for classification
+      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-image');
+      final request = http.MultipartRequest('POST', url);
       request.headers.addAll({
         'Authorization': 'Bearer ${widget.token}',
-        'Content-Type': 'application/json',
       });
-      
+      request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
+
       final response = await request.send();
+      final responseString = await response.stream.bytesToString();
+
       if (response.statusCode == 200) {
-        var respStr = await response.stream.bytesToString();
-        var data = jsonDecode(respStr);
+        var data = jsonDecode(responseString);
         setState(() {
-          _subcategory = data['bottomwear'];
+          _category = data['category'];
+          _selectedCategory = data['category']; // Also update _selectedCategory
+
+          // Validate subcategory exists in predefined list
+          final returnedSubcategory = data['subcategory'];
+          final availableSubcategories = _subcategories[_category] ?? [];
+          if (availableSubcategories.contains(returnedSubcategory)) {
+            _subcategory = returnedSubcategory;
+          } else {
+            _subcategory = null; // Set to null if not found, user can select from dropdown
+          }
+
           final occasion = data['occasion'];
           if (_occasionOptions.contains(occasion)) {
             _occasion = occasion;
@@ -248,46 +217,20 @@ class _AddItemPageState extends State<AddItemPage> {
             _occasion = null;
           }
           _occasionController.text = _occasion ?? '';
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      setState(() { _isClassifying = false; });
-    }
-  }
 
-  Future<void> _classifyShoes() async {
-    if (_uploadedItemId == null) {
-      // First upload the image if not already uploaded
-      final uploadSuccess = await _uploadImageFirst();
-      if (!uploadSuccess) return;
-    }
-    
-    setState(() { _isClassifying = true; });
-    try {
-      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-shoes?item_id=$_uploadedItemId');
-      final request = http.Request('POST', url);
-      request.headers.addAll({
-        'Authorization': 'Bearer ${widget.token}',
-        'Content-Type': 'application/json',
-      });
-      
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        var respStr = await response.stream.bytesToString();
-        var data = jsonDecode(respStr);
-        setState(() {
-          _subcategory = data['shoes'];
-          final occasion = data['occasion'];
-          if (_occasionOptions.contains(occasion)) {
-            _occasion = occasion;
+          // --- Auto-fill season based on rules ---
+          final subcat = _subcategory ?? '';
+          if (["Tshirts", "Tops", "Skirts", "Shorts", "Sandals", "Casual Dresses"].contains(subcat)) {
+            _season = 'Summer';
+          } else if (["Sweaters", "Formal Dresses"].contains(subcat)) {
+            _season = 'Winter';
+          } else if (subcat == "Jackets" && _occasion == "Casual") {
+            _season = 'Winter';
+          } else if (["Backpacks", "Clutches", "Totes", "Party Dresses"].contains(subcat)) {
+            _season = 'All Year Long';
           } else {
-            _occasion = null;
+            _season = 'All Year Long';
           }
-          _occasionController.text = _occasion ?? '';
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
@@ -340,7 +283,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Place the clothing item on a flat surface and take a clear photo',
+                      'Place the clothing item on a flat surface and take a clear photo. The app will automatically classify your item.',
                       style: TextStyle(
                         color: Colors.orange[900],
                         fontSize: 14,
@@ -361,17 +304,17 @@ class _AddItemPageState extends State<AddItemPage> {
               ),
               child: _imageFile == null
                   ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.camera_alt, size: 60, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('Take a photo of your item', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      ],
-                    )
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.camera_alt, size: 60, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('Take a photo of your item', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                ],
+              )
                   : ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: 500),
-                    ),
+                borderRadius: BorderRadius.circular(18),
+                child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: 500),
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -408,11 +351,48 @@ class _AddItemPageState extends State<AddItemPage> {
             ),
             if (_imageFile != null) ...[
               const SizedBox(height: 24),
+              if (_isClassifying) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!, width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.blue[600],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Analyzing your item...',
+                          style: TextStyle(
+                            color: Colors.blue[800],
+                            fontSize: 14,
+                            fontFamily: fontFamily,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               ElevatedButton(
-                onPressed: () async {
-                  // Upload image and auto-classify, then go to details
-                  final success = await _uploadImageFirst();
-                  if (success) {
+                onPressed: _isLoading || _isClassifying ? null : () async {
+                  // 1. Upload image and get item ID
+                  final uploadSuccess = await _uploadImageFirst();
+                  if (uploadSuccess) {
+                    // 2. Classify the item using AI
+                    await _classifyItem();
+                    // 3. Move to details form
                     setState(() => _step = 1);
                   }
                 },
@@ -423,9 +403,9 @@ class _AddItemPageState extends State<AddItemPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
                   minimumSize: const Size(180, 48),
                 ),
-                child: _isLoading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
+                child: _isLoading || _isClassifying
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
               ),
             ],
           ],
@@ -441,18 +421,18 @@ class _AddItemPageState extends State<AddItemPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 32.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   const Text(
                     'Item Details',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Masked Image Preview Container
                   if (_maskedImageUrl != null) ...[
                     Container(
@@ -529,17 +509,17 @@ class _AddItemPageState extends State<AddItemPage> {
                     ),
                     const SizedBox(height: 20),
                   ],
-                  
+
                   const Divider(height: 32, thickness: 1.2),
-                  
+
                   // Category Dropdown (auto-filled based on classification)
                   DropdownButtonFormField<String>(
                     value: _category,
                     items: _categories
                         .map((category) => DropdownMenuItem(
-                              value: category,
-                              child: Text(category, style: const TextStyle(fontFamily: fontFamily)),
-                            ))
+                      value: category,
+                      child: Text(category, style: const TextStyle(fontFamily: fontFamily)),
+                    ))
                         .toList(),
                     onChanged: (val) {
                       setState(() {
@@ -561,83 +541,83 @@ class _AddItemPageState extends State<AddItemPage> {
                     iconEnabledColor: mainRed,
                   ),
                   const SizedBox(height: 18),
-                  
-                      TextFormField(
-                        controller: _nameController,
-                        style: const TextStyle(fontFamily: fontFamily),
-                        decoration: const InputDecoration(
-                          labelText: 'Name/Description',
+
+                  TextFormField(
+                    controller: _nameController,
+                    style: const TextStyle(fontFamily: fontFamily),
+                    decoration: const InputDecoration(
+                      labelText: 'Name/Description',
                       prefixIcon: Icon(Icons.label_outline, color: mainRed),
-                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                          border: themedBorder,
-                          focusedBorder: themedBorder,
-                        ),
-                        validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
-                      ),
-                      const SizedBox(height: 18),
-                        DropdownButtonFormField<String>(
-                          value: _subcategory,
-                    items: (_selectedCategory != null ? (_subcategories[_selectedCategory] ?? <String>[]) : <String>[])
-                        .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
-                            value: sub,
-                            child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
-                        ))
-                        .toList(),
-                          onChanged: (val) => setState(() => _subcategory = val),
-                          decoration: const InputDecoration(
-                            labelText: 'Subcategory',
-                      prefixIcon: Icon(Icons.category_outlined, color: mainRed),
-                            labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                            border: themedBorder,
-                            focusedBorder: themedBorder,
-                          ),
-                          validator: (value) => value == null ? 'Please select a subcategory' : null,
-                          style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                          dropdownColor: Colors.white,
-                          iconEnabledColor: mainRed,
-                        ),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please enter a name/description' : null,
+                  ),
                   const SizedBox(height: 18),
-                      TextFormField(
-                        controller: _colorController,
-                        style: const TextStyle(fontFamily: fontFamily),
-                        decoration: const InputDecoration(
-                          labelText: 'Color',
+                  DropdownButtonFormField<String>(
+                    value: _subcategory,
+                    items: (_category != null ? (_subcategories[_category] ?? <String>[]) : <String>[])
+                        .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
+                      value: sub,
+                      child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
+                    ))
+                        .toList(),
+                    onChanged: (val) => setState(() => _subcategory = val),
+                    decoration: const InputDecoration(
+                      labelText: 'Subcategory',
+                      prefixIcon: Icon(Icons.category_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null ? 'Please select a subcategory' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: _colorController,
+                    style: const TextStyle(fontFamily: fontFamily),
+                    decoration: const InputDecoration(
+                      labelText: 'Color',
                       prefixIcon: Icon(Icons.color_lens_outlined, color: mainRed),
-                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                          border: themedBorder,
-                          focusedBorder: themedBorder,
-                        ),
-                        validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
-                      ),
-                      const SizedBox(height: 18),
-                      DropdownButtonFormField<String>(
-                        value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
-                        items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _sizeController.text = val ?? '';
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          labelText: 'Size',
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please enter a color' : null,
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
+                    items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _sizeController.text = val ?? '';
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Size',
                       prefixIcon: Icon(Icons.straighten, color: mainRed),
-                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                          border: themedBorder,
-                          focusedBorder: themedBorder,
-                        ),
-                        validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
-                        style: const TextStyle(fontFamily: fontFamily, color: mainRed),
-                        dropdownColor: Colors.white,
-                        iconEnabledColor: mainRed,
-                      ),
-                      const SizedBox(height: 18),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
                     value: _occasionOptions.contains(_occasion) ? _occasion : null,
                     items: _occasionOptions
                         .map((option) => DropdownMenuItem(
-                              value: option,
-                              child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
-                            ))
+                      value: option,
+                      child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                    ))
                         .toList(),
                     onChanged: (val) {
                       setState(() {
@@ -645,39 +625,65 @@ class _AddItemPageState extends State<AddItemPage> {
                         _occasionController.text = val ?? '';
                       });
                     },
-                        decoration: const InputDecoration(
-                          labelText: 'Occasion',
+                    decoration: const InputDecoration(
+                      labelText: 'Occasion',
                       prefixIcon: Icon(Icons.event_outlined, color: mainRed),
-                          labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
-                          border: themedBorder,
-                          focusedBorder: themedBorder,
-                        ),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
                     validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
                     style: const TextStyle(fontFamily: fontFamily, color: mainRed),
                     dropdownColor: Colors.white,
                     iconEnabledColor: mainRed,
-                      ),
-                      const SizedBox(height: 18),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: mainRed,
-                          foregroundColor: Colors.white,
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    value: _season,
+                    items: _seasonOptions
+                        .map((option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                    ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _season = val;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Season',
+                      prefixIcon: Icon(Icons.wb_sunny_outlined, color: mainRed),
+                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      border: themedBorder,
+                      focusedBorder: themedBorder,
+                    ),
+                    validator: (value) => value == null || value.isEmpty ? 'Please select a season' : null,
+                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    dropdownColor: Colors.white,
+                    iconEnabledColor: mainRed,
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainRed,
+                      foregroundColor: Colors.white,
                       elevation: 3,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       minimumSize: const Size(double.infinity, 56),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Add Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: fontFamily)),
                   ),
                 ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
     }
   }
 }

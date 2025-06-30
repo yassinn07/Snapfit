@@ -19,6 +19,7 @@ import 'log_in.dart'; // <-- Add this import at the top with other imports
 import 'all_category_items_page.dart'; // Import for AllCategoryItemsPage
 import 'services/brand_service.dart'; // Import brand service
 import 'ai_stylist_page.dart';
+import 'services/outfit_service.dart'; // Add this import
 
 // ----- Main Navigation Screen -----
 
@@ -185,7 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       MyShopPage(token: widget.token, userId: widget.userId),
-      AIStylistPage(),
+      // Pass token in route settings when navigating to AIStylistPage
+      Builder(
+        builder: (context) {
+          return AIStylistPage(userId: widget.userId, token: widget.token);
+        },
+      ),
       const ClosetPage(),
       ProfilePage(
         userInitial: _userInitial,
@@ -341,7 +347,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _showPreferences = false; // controls preference card visibility in this page
-  late List<Map<String, dynamic>> outfits;
+  late List<Outfit> outfits;
 
   @override
   void initState() {
@@ -350,18 +356,38 @@ class _HomePageState extends State<HomePage> {
     _loadOutfits();
   }
 
+  Future<void> _loadOutfits() async {
+    try {
+      final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+      if (homeScreenState != null) {
+        final outfitService = OutfitService(token: homeScreenState.widget.token);
+        final fetchedOutfits = await outfitService.getUserOutfits();
+        setState(() {
+          outfits = fetchedOutfits;
+        });
+      }
+    } catch (e) {
+      print('Error loading outfits: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error loading outfits'))
+        );
+      }
+    }
+  }
+
   void _toggleFavorite(String outfitId) async {
     try {
       final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
       if (homeScreenState != null) {
         final profileService = ProfileService(token: homeScreenState.widget.token!);
         final success = await profileService.toggleFavorite(outfitId);
-        
+
         if (success && mounted) {
           setState(() {
-            final index = outfits.indexWhere((outfit) => outfit['id'] == outfitId);
+            final index = outfits.indexWhere((outfit) => outfit.id == outfitId);
             if (index != -1) {
-              outfits[index]['isFavorite'] = !(outfits[index]['isFavorite'] ?? false);
+              outfits[index].isFavorite = !(outfits[index].isFavorite ?? false);
             }
           });
         }
@@ -370,44 +396,7 @@ class _HomePageState extends State<HomePage> {
       print('Error toggling favorite: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error updating favorite status'))
-        );
-      }
-    }
-  }
-
-  Future<void> _loadOutfits() async {
-    try {
-      // Get token from parent HomeScreen
-      final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
-      if (homeScreenState != null) {
-        final profileService = ProfileService(token: homeScreenState.widget.token);
-        final favorites = await profileService.getFavorites();
-        
-        // TODO: Load actual outfits from backend
-        // For now, using dummy data with favorite status
-        setState(() {
-          outfits = [
-            {
-              'id': '1',
-              'imageUrl': null,
-              'tags': ['Everyday', 'Casual'],
-              'isFavorite': favorites.any((fav) => fav['item_id'] == '1'),
-            },
-            {
-              'id': '2',
-              'imageUrl': null,
-              'tags': ['Work', 'Formal'],
-              'isFavorite': favorites.any((fav) => fav['item_id'] == '2'),
-            },
-          ];
-        });
-      }
-    } catch (e) {
-      print('Error loading outfits: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error loading outfits'))
+            const SnackBar(content: Text('Error updating favorite status'))
         );
       }
     }
@@ -417,13 +406,13 @@ class _HomePageState extends State<HomePage> {
     final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
     if (homeScreenState != null) {
       Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MyOutfitsPage(
-            initialFilter: filterCategory,
-            token: homeScreenState.widget.token
+          context,
+          MaterialPageRoute(
+              builder: (context) => MyOutfitsPage(
+                  initialFilter: filterCategory,
+                  token: homeScreenState.widget.token
+              )
           )
-        )
       );
     }
   }
@@ -515,10 +504,7 @@ class _HomePageState extends State<HomePage> {
                   itemCount: outfits.length,
                   itemBuilder: (context, index) {
                     final outfit = outfits[index];
-                    return _buildOutfitCard(
-                      outfitId: outfit['id'] ?? '$index', imageUrl: outfit['imageUrl'], tags: List<String>.from(outfit['tags'] ?? []), isFavorite: outfit['isFavorite'] ?? false,
-                      onFavoriteTap: () => _toggleFavorite(outfit['id'] ?? '$index'), onRefreshTap: () { print("Refresh tapped on outfit ${outfit['id']}"); },
-                    );
+                    return _buildOutfitPreviewCard(outfit, defaultFontFamily);
                   }
               ),
             ),
@@ -529,204 +515,254 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPreferenceRow(IconData icon, String title, String value, Color circleColor) { 
-    const String defaultFontFamily = 'Archivo'; 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center, 
-      children: [ 
-        Container(
-          width: 40, 
-          height: 40, 
-          decoration: BoxDecoration(
-            shape: BoxShape.circle, 
-            color: circleColor
-          ), 
-          child: Center(
-            child: Icon(
-              icon, 
-              size: 24, 
-              color: Colors.black87
-            )
-          )
-        ), 
-        const SizedBox(width: 12), 
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, 
-            mainAxisAlignment: MainAxisAlignment.center, 
-            children: [ 
-              Text(
-                title, 
-                style: TextStyle(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.w500, 
-                  letterSpacing: -0.02 * 14, 
-                  color: const Color(0xFF221F1B).withOpacity(0.76), 
-                  fontFamily: defaultFontFamily
-                )
-              ), 
-              const SizedBox(height: 4), 
-              Text(
-                value, 
-                maxLines: 1, 
-                overflow: TextOverflow.ellipsis, 
-                style: TextStyle(
-                  fontSize: 15, 
-                  fontWeight: FontWeight.w600, 
-                  letterSpacing: -0.02 * 15, 
-                  color: const Color(0xFF040404), 
-                  fontFamily: defaultFontFamily
-                )
-              )
-            ]
-          )
-        )
-      ]
-    ); 
-  }
-  
-  Widget _buildOutfitCard({
-    required String outfitId, 
-    String? imageUrl, 
-    List<String> tags = const [], 
-    bool isFavorite = false, 
-    VoidCallback? onFavoriteTap, 
-    VoidCallback? onRefreshTap
-  }) { 
-    const String defaultFontFamily = 'Archivo'; 
+  Widget _buildOutfitPreviewCard(Outfit outfit, String fontFamily) {
+    // Use the first image as preview, or a placeholder
+    final String? imageUrl = outfit.itemImageUrls.isNotEmpty ? outfit.itemImageUrls[0] : null;
     return Container(
-      width: 228, 
-      margin: const EdgeInsets.only(right: 18), 
+      width: 228,
+      margin: const EdgeInsets.only(right: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, 
-        children: [ 
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Container(
-            height: 272, 
+            height: 272,
             decoration: BoxDecoration(
-              color: Colors.white, 
-              borderRadius: BorderRadius.circular(5), 
-              boxShadow: [ 
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.25), 
-                  blurRadius: 4, 
-                  offset: const Offset(0, 4)
-                ) 
-              ]
-            ), 
-            child: Stack(
-              children: [ 
-                Positioned.fill(
-                  child: Container(
-                    margin: const EdgeInsets.all(12), 
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F3F3), 
-                      borderRadius: BorderRadius.circular(10)
-                    ), 
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10), 
-                      child: imageUrl != null 
-                        ? Image.network(
-                            imageUrl, 
-                            fit: BoxFit.cover, 
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 50, color: Colors.grey), 
-                            loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: CircularProgressIndicator())
-                          ) 
-                        : const Icon(Icons.image_outlined, size: 80, color: Colors.grey)
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 4,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imageUrl != null
+                  ? Image.network(
+                      imageUrl.startsWith('http')
+                        ? imageUrl
+                        : 'http://10.0.2.2:8000/static/${normalizeImagePath(imageUrl)}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 50, color: Colors.grey),
+                      loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: CircularProgressIndicator()),
                     )
-                  )
-                ), 
-                Positioned(
-                  top: 18, 
-                  left: 18, 
-                  child: _buildCardIconButton(
-                    icon: isFavorite ? Icons.favorite : Icons.favorite_border, 
-                    iconColor: isFavorite ? Colors.red : Colors.black.withOpacity(0.7), 
-                    onTap: onFavoriteTap
-                  )
-                ), 
-                Positioned(
-                  bottom: 18, 
-                  right: 18, 
-                  child: _buildCardIconButton(
-                    icon: Icons.refresh, 
-                    onTap: onRefreshTap
-                  )
-                )
-              ]
-            )
-          ), 
-          const SizedBox(height: 8), 
-          if (tags.isNotEmpty) 
+                  : const Icon(Icons.image_outlined, size: 80, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (outfit.tags.isNotEmpty)
             Wrap(
-              spacing: 6.0, 
-              runSpacing: 4.0, 
-              children: tags.map((tag) => _buildTagChip(tag, defaultFontFamily)).toList()
-            )
-        ]
-      )
-    ); 
+              spacing: 6.0,
+              runSpacing: 4.0,
+              children: outfit.tags.map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+            ),
+        ],
+      ),
+    );
   }
-  
-  Widget _buildCardIconButton({
-    required IconData icon, 
-    Color? iconColor, 
-    VoidCallback? onTap
-  }) { 
-    return Material(
-      color: Colors.white, 
-      shape: const CircleBorder(), 
-      elevation: 1.0, 
-      child: InkWell(
-        customBorder: const CircleBorder(), 
-        onTap: onTap, 
-        child: Container(
-          width: 33, 
-          height: 33, 
-          decoration: const BoxDecoration(shape: BoxShape.circle), 
-          child: Center(
-            child: Icon(
-              icon, 
-              size: 17, 
-              color: iconColor ?? Colors.black.withOpacity(0.7)
-            )
+
+  Widget _buildPreferenceRow(IconData icon, String title, String value, Color circleColor) {
+    const String defaultFontFamily = 'Archivo';
+    return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: circleColor
+              ),
+              child: Center(
+                  child: Icon(
+                      icon,
+                      size: 24,
+                      color: Colors.black87
+                  )
+              )
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                        title,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.02 * 14,
+                            color: const Color(0xFF221F1B).withOpacity(0.76),
+                            fontFamily: defaultFontFamily
+                        )
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.02 * 15,
+                            color: const Color(0xFF040404),
+                            fontFamily: defaultFontFamily
+                        )
+                    )
+                  ]
+              )
           )
-        )
-      )
-    ); 
+        ]
+    );
   }
-  
-  Widget _buildTagChip(String tag, String fontFamily) { 
-    Color bgColor; 
-    switch (tag.toLowerCase()) { 
-      case 'everyday': 
-        bgColor = const Color(0xFFD2EAB8); 
-        break; 
-      case 'party': 
-        bgColor = const Color(0xFFFED5D9); 
-        break; 
-      case 'items': 
-        bgColor = const Color(0xFFE6E6E6); 
-        break; 
-      default: 
-        bgColor = Colors.grey.shade300; 
-    } 
+
+  Widget _buildOutfitCard({
+    required String outfitId,
+    String? imageUrl,
+    List<String> tags = const [],
+    bool isFavorite = false,
+    VoidCallback? onFavoriteTap,
+    VoidCallback? onRefreshTap
+  }) {
+    const String defaultFontFamily = 'Archivo';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0), 
-      decoration: BoxDecoration(
-        color: bgColor, 
-        borderRadius: BorderRadius.circular(20.0)
-      ), 
-      child: Text(
-        tag, 
-        style: TextStyle(
-          fontFamily: fontFamily, 
-          fontSize: 14, 
-          fontWeight: FontWeight.w400, 
-          letterSpacing: -0.02 * 14, 
-          color: Colors.black
+        width: 228,
+        margin: const EdgeInsets.only(right: 18),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                  height: 272,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 4,
+                            offset: const Offset(0, 4)
+                        )
+                      ]
+                  ),
+                  child: Stack(
+                      children: [
+                        Positioned.fill(
+                            child: Container(
+                                margin: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F3F3),
+                                    borderRadius: BorderRadius.circular(10)
+                                ),
+                                child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: imageUrl != null
+                                        ? Image.network(
+                                        imageUrl.startsWith('http')
+                                          ? imageUrl
+                                          : 'http://10.0.2.2:8000/static/${normalizeImagePath(imageUrl)}',
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 50, color: Colors.grey),
+                                        loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: CircularProgressIndicator())
+                                    )
+                                        : const Icon(Icons.image_outlined, size: 80, color: Colors.grey)
+                                )
+                            )
+                        ),
+                        Positioned(
+                            top: 18,
+                            left: 18,
+                            child: _buildCardIconButton(
+                                icon: isFavorite ? Icons.favorite : Icons.favorite_border,
+                                iconColor: isFavorite ? Colors.red : Colors.black.withOpacity(0.7),
+                                onTap: onFavoriteTap
+                            )
+                        ),
+                        Positioned(
+                            bottom: 18,
+                            right: 18,
+                            child: _buildCardIconButton(
+                                icon: Icons.refresh,
+                                onTap: onRefreshTap
+                            )
+                        )
+                      ]
+                  )
+              ),
+              const SizedBox(height: 8),
+              if (tags.isNotEmpty)
+                Wrap(
+                    spacing: 6.0,
+                    runSpacing: 4.0,
+                    children: tags.map((tag) => _buildTagChip(tag, defaultFontFamily)).toList()
+                )
+            ]
         )
-      )
-    ); 
+    );
+  }
+
+  Widget _buildCardIconButton({
+    required IconData icon,
+    Color? iconColor,
+    VoidCallback? onTap
+  }) {
+    return Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 1.0,
+        child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Container(
+                width: 33,
+                height: 33,
+                decoration: const BoxDecoration(shape: BoxShape.circle),
+                child: Center(
+                    child: Icon(
+                        icon,
+                        size: 17,
+                        color: iconColor ?? Colors.black.withOpacity(0.7)
+                    )
+                )
+            )
+        )
+    );
+  }
+
+  Widget _buildTagChip(String tag, String fontFamily) {
+    Color bgColor;
+    switch (tag.toLowerCase()) {
+      case 'everyday':
+        bgColor = const Color(0xFFD2EAB8);
+        break;
+      case 'party':
+        bgColor = const Color(0xFFFED5D9);
+        break;
+      case 'items':
+        bgColor = const Color(0xFFE6E6E6);
+        break;
+      default:
+        bgColor = Colors.grey.shade300;
+    }
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
+        decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(20.0)
+        ),
+        child: Text(
+            tag,
+            style: TextStyle(
+                fontFamily: fontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.02 * 14,
+                color: Colors.black
+            )
+        )
+    );
   }
 }
 
@@ -808,7 +844,7 @@ class _MyShopPageState extends State<MyShopPage> {
     const String defaultFontFamily = 'Archivo';
     // Filter categories based on search query
     final filteredCategories = _allCategories.where((cat) =>
-      cat.toLowerCase().contains(_searchQuery.toLowerCase())
+        cat.toLowerCase().contains(_searchQuery.toLowerCase())
     ).toList();
 
     return Scaffold(
@@ -876,7 +912,7 @@ class _MyShopPageState extends State<MyShopPage> {
                 context,
                 cat,
                 defaultFontFamily,
-                () => _navigateToFilteredShop(context, cat, FilterType.category),
+                    () => _navigateToFilteredShop(context, cat, FilterType.category),
               ),
             const SizedBox(height: 32),
             // --- Local Brands Section (Dynamic) ---
@@ -896,14 +932,14 @@ class _MyShopPageState extends State<MyShopPage> {
             else if (_brandError.isNotEmpty)
               Center(child: Text(_brandError, style: TextStyle(color: Colors.red)))
             else if (_brands.isEmpty)
-              const Center(child: Text("No local brands available."))
-            else
-              ..._brands.map((brand) => _buildCategoryRow(
-                context,
-                brand.name,
-                defaultFontFamily,
-                () => _navigateToFilteredShop(context, brand.name, FilterType.brand),
-              )),
+                const Center(child: Text("No local brands available."))
+              else
+                ..._brands.map((brand) => _buildCategoryRow(
+                  context,
+                  brand.name,
+                  defaultFontFamily,
+                      () => _navigateToFilteredShop(context, brand.name, FilterType.brand),
+                )),
             const SizedBox(height: 32),
           ],
         ),
@@ -1018,16 +1054,41 @@ class ClosetPage extends StatefulWidget {
 class _ClosetPageState extends State<ClosetPage> {
   bool _isLoading = true;
   List<ClosetItem> _closetItems = [];
+  List<Outfit> _outfits = [];
+  int everydayOutfitCount = 0;
+  int weekendOutfitCount = 0;
+  int workoutOutfitCount = 0;
 
   // Selected filters
   String _selectedUpperFilter = "All Upper Body";
   String _selectedLowerFilter = "All Lower Body";
+  String _selectedDressFilter = "All Dress";
+  String _selectedBagsFilter = "All Bags";
   String _selectedShoesFilter = "All Shoes";
 
   @override
   void initState() {
     super.initState();
     _loadClosetItems();
+    _loadOutfitsAndCounters();
+  }
+
+  Future<void> _loadOutfitsAndCounters() async {
+    try {
+      final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+      if (homeScreenState != null) {
+        final outfitService = OutfitService(token: homeScreenState.widget.token);
+        final outfits = await outfitService.getUserOutfits();
+        setState(() {
+          _outfits = outfits;
+          everydayOutfitCount = outfits.where((o) => o.tags.any((t) => t.toLowerCase() == 'everyday')).length;
+          weekendOutfitCount = outfits.where((o) => o.tags.any((t) => t.toLowerCase() == 'weekend')).length;
+          workoutOutfitCount = outfits.where((o) => o.tags.any((t) => t.toLowerCase() == 'workout')).length;
+        });
+      }
+    } catch (e) {
+      print('Error loading outfits for counters: $e');
+    }
   }
 
   Future<void> _loadClosetItems() async {
@@ -1054,7 +1115,7 @@ class _ClosetPageState extends State<ClosetPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error loading your closet items'))
+            const SnackBar(content: Text('Error loading your closet items'))
         );
       }
     }
@@ -1073,7 +1134,7 @@ class _ClosetPageState extends State<ClosetPage> {
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Item deleted successfully'))
+              const SnackBar(content: Text('Item deleted successfully'))
           );
         }
       }
@@ -1081,7 +1142,7 @@ class _ClosetPageState extends State<ClosetPage> {
       print('Error deleting item: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error deleting item'))
+            const SnackBar(content: Text('Error deleting item'))
         );
       }
     }
@@ -1091,13 +1152,13 @@ class _ClosetPageState extends State<ClosetPage> {
     final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
     if (homeScreenState != null) {
       Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MyOutfitsPage(
-            initialFilter: filterCategory,
-            token: homeScreenState.widget.token
+          context,
+          MaterialPageRoute(
+              builder: (context) => MyOutfitsPage(
+                  initialFilter: filterCategory,
+                  token: homeScreenState.widget.token
+              )
           )
-        )
       );
     }
   }
@@ -1106,12 +1167,12 @@ class _ClosetPageState extends State<ClosetPage> {
     final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
     if (homeScreenState != null) {
       final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AddItemPage(token: homeScreenState.widget.token)
-        )
+          context,
+          MaterialPageRoute(
+              builder: (context) => AddItemPage(token: homeScreenState.widget.token, userId: homeScreenState.widget.userId)
+          )
       );
-      
+
       if (result == true) {
         // Item was added, refresh the list
         _loadClosetItems();
@@ -1133,36 +1194,38 @@ class _ClosetPageState extends State<ClosetPage> {
     // Count items by category
     int upperBodyCount = _closetItems.where((item) => item.category == 'Upper Body').length;
     int lowerBodyCount = _closetItems.where((item) => item.category == 'Lower Body').length;
+    int dressCount = _closetItems.where((item) => item.category == 'Dress').length;
+    int bagsCount = _closetItems.where((item) => item.category == 'Bags').length;
     int shoesCount = _closetItems.where((item) => item.category == 'Shoes').length;
 
     // Fixed target counts
     const int targetUpperBodyCount = 4;
     const int targetLowerBodyCount = 3;
-    
+
     int totalItemsUploaded = _closetItems.length;
     const int totalItemsRequired = 7;
     bool isComplete = totalItemsUploaded >= totalItemsRequired;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.only(top: 48.0, left: 16.0, right: 16.0, bottom: 16.0),
-        child: _buildCompleteView(context)
-      )
+        backgroundColor: Colors.white,
+        body: Padding(
+            padding: const EdgeInsets.only(top: 48.0, left: 16.0, right: 16.0, bottom: 16.0),
+            child: _buildCompleteView(context)
+        )
     );
   }
 
   Widget _buildCompleteView(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
 
-    // Count outfits (placeholder for now)
-    int everydayOutfitCount = 2;
-    int weekendOutfitCount = 1;
-    int workoutOutfitCount = 1;
+    // Use real counters
+    // everydayOutfitCount, weekendOutfitCount, workoutOutfitCount are now set from backend
 
     // Define filters
     List<String> upperBodyFilters = ["All Upper Body", "Jackets", "Shirts", "Sweaters", "Tops", "Tshirts"];
     List<String> lowerBodyFilters = ["All Lower Body", "Jeans", "Shorts", "Skirts", "Track Pants", "Trousers"];
+    List<String> dressFilters = ["All Dress", "Casual Dresses", "Formal Dresses", "Party Dresses"];
+    List<String> bagsFilters = ["All Bags", "Backpacks", "Clutches", "Totes"];
     List<String> shoesFilters = ["All Shoes", "Casual - Formal Shoes", "Sandals", "Sports Shoes"];
 
     // Get upper body items
@@ -1173,6 +1236,16 @@ class _ClosetPageState extends State<ClosetPage> {
     // Get lower body items
     List<ClosetItem> lowerBodyItems = _closetItems
         .where((item) => item.category == 'Lower Body')
+        .toList();
+
+    // Get dress items
+    List<ClosetItem> dressItems = _closetItems
+        .where((item) => item.category == 'Dress')
+        .toList();
+
+    // Get bags items
+    List<ClosetItem> bagsItems = _closetItems
+        .where((item) => item.category == 'Bags')
         .toList();
 
     // Get shoes items
@@ -1193,6 +1266,18 @@ class _ClosetPageState extends State<ClosetPage> {
           .toList();
     }
 
+    if (_selectedDressFilter != "All Dress") {
+      dressItems = dressItems
+          .where((item) => item.subcategory.toLowerCase() == _selectedDressFilter.toLowerCase())
+          .toList();
+    }
+
+    if (_selectedBagsFilter != "All Bags") {
+      bagsItems = bagsItems
+          .where((item) => item.subcategory.toLowerCase() == _selectedBagsFilter.toLowerCase())
+          .toList();
+    }
+
     if (_selectedShoesFilter != "All Shoes") {
       shoesItems = shoesItems
           .where((item) => item.subcategory.toLowerCase() == _selectedShoesFilter.toLowerCase())
@@ -1200,196 +1285,298 @@ class _ClosetPageState extends State<ClosetPage> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadClosetItems,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            _buildSectionHeader(
-              context: context,
-              title: "My Closet ",
-              fontFamily: defaultFontFamily,
-              onNavigate: () => _navigateToMyOutfits(null)
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Everyday"),
-                    child: _buildCategorySummaryCard(
-                      title: "Everyday",
-                      count: everydayOutfitCount,
-                      icon: Icons.calendar_today_outlined,
-                      bgColor: const Color(0xFFD2EAB8),
-                      fontFamily: defaultFontFamily
-                    )
-                  )
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Weekend"),
-                    child: _buildCategorySummaryCard(
-                      title: "Weekend",
-                      count: weekendOutfitCount,
-                      icon: Icons.weekend_outlined,
-                      bgColor: const Color(0xFFF9D8DA),
-                      fontFamily: defaultFontFamily
-                    )
-                  )
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _navigateToMyOutfits("Workout"),
-                    child: _buildCategorySummaryCard(
-                      title: "Workout",
-                      count: workoutOutfitCount,
-                      icon: Icons.fitness_center,
-                      bgColor: const Color(0xFFFEE4CB),
-                      fontFamily: defaultFontFamily
-                    )
-                  )
-                )
-              ]
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _navigateToAddItem,
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('Add New Item', style: TextStyle(fontFamily: 'Archivo', color: Colors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFD55F5F),
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+        onRefresh: _loadClosetItems,
+        child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "My Closet ",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToMyOutfits(null)
                   ),
-                ),
-              ),
-            ),
-            _buildSectionHeader(
-              context: context,
-              title: "Upper Body",
-              fontFamily: defaultFontFamily,
-              onNavigate: () => _navigateToAllCategoryItems("Upper Body", _selectedUpperFilter != "All Upper Body" ? _selectedUpperFilter : null)
-            ),
-            const SizedBox(height: 10),
-            _buildFilterChipsRow(
-              context: context,
-              filters: upperBodyFilters,
-              selectedFilter: _selectedUpperFilter,
-              fontFamily: defaultFontFamily,
-              onFilterSelected: (filter) {
-                setState(() {
-                  _selectedUpperFilter = filter;
-                });
-              }
-            ),
-            const SizedBox(height: 18),
-            buildClosetItemsRow(
-              context: context,
-              items: upperBodyItems,
-              fontFamily: defaultFontFamily,
-              onTap: (item) {
-                // TODO: Navigate to item detail
-                print("Tapped item: ${item.id}");
-              },
-              onEdit: (item) {
-                // TODO: Edit item
-                print("Edit item: ${item.id}");
-              },
-              onDelete: (item) {
-                _deleteItem(item.id);
-              },
-              onAddItem: _navigateToAddItem
-            ),
-            const SizedBox(height: 10),
-            _buildSectionHeader(
-              context: context,
-              title: "Lower Body",
-              fontFamily: defaultFontFamily,
-              onNavigate: () => _navigateToAllCategoryItems("Lower Body", _selectedLowerFilter != "All Lower Body" ? _selectedLowerFilter : null)
-            ),
-            const SizedBox(height: 10),
-            _buildFilterChipsRow(
-              context: context,
-              filters: lowerBodyFilters,
-              selectedFilter: _selectedLowerFilter,
-              fontFamily: defaultFontFamily,
-              onFilterSelected: (filter) {
-                setState(() {
-                  _selectedLowerFilter = filter;
-                });
-              }
-            ),
-            const SizedBox(height: 18),
-            buildClosetItemsRow(
-              context: context,
-              items: lowerBodyItems,
-              fontFamily: defaultFontFamily,
-              onTap: (item) {
-                // TODO: Navigate to item detail
-                print("Tapped item: ${item.id}");
-              },
-              onEdit: (item) {
-                // TODO: Edit item
-                print("Edit item: ${item.id}");
-              },
-              onDelete: (item) {
-                _deleteItem(item.id);
-              },
-              onAddItem: _navigateToAddItem
-            ),
-            const SizedBox(height: 10),
-            _buildSectionHeader(
-              context: context,
-              title: "Shoes",
-              fontFamily: defaultFontFamily,
-              onNavigate: () => _navigateToAllCategoryItems("Shoes", _selectedShoesFilter != "All Shoes" ? _selectedShoesFilter : null)
-            ),
-            const SizedBox(height: 10),
-            _buildFilterChipsRow(
-              context: context,
-              filters: shoesFilters,
-              selectedFilter: _selectedShoesFilter,
-              fontFamily: defaultFontFamily,
-              onFilterSelected: (filter) {
-                setState(() {
-                  _selectedShoesFilter = filter;
-                });
-              }
-            ),
-            const SizedBox(height: 18),
-            buildClosetItemsRow(
-              context: context,
-              items: shoesItems,
-              fontFamily: defaultFontFamily,
-              onTap: (item) {
-                // TODO: Navigate to item detail
-                print("Tapped item: ${item.id}");
-              },
-              onEdit: (item) {
-                // TODO: Edit item
-                print("Edit item: ${item.id}");
-              },
-              onDelete: (item) {
-                _deleteItem(item.id);
-              },
-              onAddItem: _navigateToAddItem
-            ),
-            const SizedBox(height: 40)
-          ]
+                  const SizedBox(height: 20),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                            child: InkWell(
+                                onTap: () => _navigateToMyOutfits("Everyday"),
+                                child: _buildCategorySummaryCard(
+                                    title: "Everyday",
+                                    count: everydayOutfitCount,
+                                    icon: Icons.calendar_today_outlined,
+                                    bgColor: const Color(0xFFD2EAB8),
+                                    fontFamily: defaultFontFamily
+                                )
+                            )
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: InkWell(
+                                onTap: () => _navigateToMyOutfits("Weekend"),
+                                child: _buildCategorySummaryCard(
+                                    title: "Weekend",
+                                    count: weekendOutfitCount,
+                                    icon: Icons.weekend_outlined,
+                                    bgColor: const Color(0xFFF9D8DA),
+                                    fontFamily: defaultFontFamily
+                                )
+                            )
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: InkWell(
+                                onTap: () => _navigateToMyOutfits("Workout"),
+                                child: _buildCategorySummaryCard(
+                                    title: "Workout",
+                                    count: workoutOutfitCount,
+                                    icon: Icons.fitness_center,
+                                    bgColor: const Color(0xFFFEE4CB),
+                                    fontFamily: defaultFontFamily
+                                )
+                            )
+                        )
+                      ]
+                  ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _navigateToAddItem,
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        label: const Text('Add New Item', style: TextStyle(fontFamily: 'Archivo', color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFD55F5F),
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "Upper Body",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToAllCategoryItems("Upper Body", _selectedUpperFilter != "All Upper Body" ? _selectedUpperFilter : null)
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFilterChipsRow(
+                      context: context,
+                      filters: upperBodyFilters,
+                      selectedFilter: _selectedUpperFilter,
+                      fontFamily: defaultFontFamily,
+                      onFilterSelected: (filter) {
+                        setState(() {
+                          _selectedUpperFilter = filter;
+                        });
+                      }
+                  ),
+                  const SizedBox(height: 18),
+                  buildClosetItemsRow(
+                      context: context,
+                      items: upperBodyItems,
+                      fontFamily: defaultFontFamily,
+                      onTap: (item) {
+                        // TODO: Navigate to item detail
+                        print("Tapped item: ${item.id}");
+                      },
+                      onEdit: (item) {
+                        // TODO: Edit item
+                        print("Edit item: ${item.id}");
+                      },
+                      onDelete: (item) {
+                        _deleteItem(item.id);
+                      },
+                      onAddItem: _navigateToAddItem
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "Lower Body",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToAllCategoryItems("Lower Body", _selectedLowerFilter != "All Lower Body" ? _selectedLowerFilter : null)
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFilterChipsRow(
+                      context: context,
+                      filters: lowerBodyFilters,
+                      selectedFilter: _selectedLowerFilter,
+                      fontFamily: defaultFontFamily,
+                      onFilterSelected: (filter) {
+                        setState(() {
+                          _selectedLowerFilter = filter;
+                        });
+                      }
+                  ),
+                  const SizedBox(height: 18),
+                  buildClosetItemsRow(
+                      context: context,
+                      items: lowerBodyItems,
+                      fontFamily: defaultFontFamily,
+                      onTap: (item) {
+                        // TODO: Navigate to item detail
+                        print("Tapped item: ${item.id}");
+                      },
+                      onEdit: (item) {
+                        // TODO: Edit item
+                        print("Edit item: ${item.id}");
+                      },
+                      onDelete: (item) {
+                        _deleteItem(item.id);
+                      },
+                      onAddItem: _navigateToAddItem
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "Dress",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToAllCategoryItems("Dress", _selectedDressFilter != "All Dress" ? _selectedDressFilter : null)
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFilterChipsRow(
+                      context: context,
+                      filters: dressFilters,
+                      selectedFilter: _selectedDressFilter,
+                      fontFamily: defaultFontFamily,
+                      onFilterSelected: (filter) {
+                        setState(() {
+                          _selectedDressFilter = filter;
+                        });
+                      }
+                  ),
+                  const SizedBox(height: 18),
+                  buildClosetItemsRow(
+                      context: context,
+                      items: dressItems,
+                      fontFamily: defaultFontFamily,
+                      onTap: (item) {
+                        // TODO: Navigate to item detail
+                        print("Tapped item: ${item.id}");
+                      },
+                      onEdit: (item) {
+                        // TODO: Edit item
+                        print("Edit item: ${item.id}");
+                      },
+                      onDelete: (item) {
+                        _deleteItem(item.id);
+                      },
+                      onAddItem: _navigateToAddItem
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "Bags",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToAllCategoryItems("Bags", _selectedBagsFilter != "All Bags" ? _selectedBagsFilter : null)
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFilterChipsRow(
+                      context: context,
+                      filters: bagsFilters,
+                      selectedFilter: _selectedBagsFilter,
+                      fontFamily: defaultFontFamily,
+                      onFilterSelected: (filter) {
+                        setState(() {
+                          _selectedBagsFilter = filter;
+                        });
+                      }
+                  ),
+                  const SizedBox(height: 18),
+                  buildClosetItemsRow(
+                      context: context,
+                      items: bagsItems,
+                      fontFamily: defaultFontFamily,
+                      onTap: (item) {
+                        // TODO: Navigate to item detail
+                        print("Tapped item: ${item.id}");
+                      },
+                      onEdit: (item) {
+                        // TODO: Edit item
+                        print("Edit item: ${item.id}");
+                      },
+                      onDelete: (item) {
+                        _deleteItem(item.id);
+                      },
+                      onAddItem: _navigateToAddItem
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSectionHeader(
+                      context: context,
+                      title: "Shoes",
+                      fontFamily: defaultFontFamily,
+                      onNavigate: () => _navigateToAllCategoryItems("Shoes", _selectedShoesFilter != "All Shoes" ? _selectedShoesFilter : null)
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFilterChipsRow(
+                      context: context,
+                      filters: shoesFilters,
+                      selectedFilter: _selectedShoesFilter,
+                      fontFamily: defaultFontFamily,
+                      onFilterSelected: (filter) {
+                        setState(() {
+                          _selectedShoesFilter = filter;
+                        });
+                      }
+                  ),
+                  const SizedBox(height: 18),
+                  buildClosetItemsRow(
+                      context: context,
+                      items: shoesItems,
+                      fontFamily: defaultFontFamily,
+                      onTap: (item) {
+                        // TODO: Navigate to item detail
+                        print("Tapped item: ${item.id}");
+                      },
+                      onEdit: (item) {
+                        // TODO: Edit item
+                        print("Edit item: ${item.id}");
+                      },
+                      onDelete: (item) {
+                        _deleteItem(item.id);
+                      },
+                      onAddItem: _navigateToAddItem
+                  ),
+                  const SizedBox(height: 40),
+                  // My Outfits Preview Section
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24.0, bottom: 8.0, left: 4.0, right: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("My Outfits", style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 23, color: Colors.black, fontFamily: defaultFontFamily)),
+                        TextButton(
+                          onPressed: () => _navigateToMyOutfits(null),
+                          child: Text("View all", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 15, color: Colors.black.withOpacity(0.65), fontFamily: defaultFontFamily)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _outfits.length > 3 ? 3 : _outfits.length,
+                      itemBuilder: (context, index) {
+                        final outfit = _outfits[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: _buildModernOutfitPreviewCard(outfit),
+                        );
+                      },
+                    ),
+                  ),
+                ]
+            )
         )
-      )
     );
   }
 
@@ -1400,76 +1587,76 @@ class _ClosetPageState extends State<ClosetPage> {
     double spacing = 16;
     double progressBarWidth = (availableWidth - containerPadding - spacing) / 2;
     return Column(
-      children: [
-        Text(label, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Archivo')),
-        const SizedBox(height: 4),
-        Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            Container(width: progressBarWidth, height: 8, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4))),
-            Container(width: progress * progressBarWidth, height: 8, decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)))
-          ]
-        ),
-        Text("$current/$total", textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontFamily: 'Archivo'))
-      ]
+        children: [
+          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Archivo')),
+          const SizedBox(height: 4),
+          Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Container(width: progressBarWidth, height: 8, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4))),
+                Container(width: progress * progressBarWidth, height: 8, decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)))
+              ]
+          ),
+          Text("$current/$total", textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontFamily: 'Archivo'))
+        ]
     );
   }
 
   Widget _buildSmallCategoryCard(String title, IconData icon, Color iconColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F1EE),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [ BoxShadow(color: Colors.black12, blurRadius: 4, spreadRadius: 1) ]
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Archivo')),
-          const Text("0 OUTFITS", style: TextStyle(fontSize: 10, fontFamily: 'Archivo'))
-        ]
-      )
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+            color: const Color(0xFFF6F1EE),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [ BoxShadow(color: Colors.black12, blurRadius: 4, spreadRadius: 1) ]
+        ),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: iconColor, size: 24),
+              const SizedBox(height: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Archivo')),
+              const Text("0 OUTFITS", style: TextStyle(fontSize: 10, fontFamily: 'Archivo'))
+            ]
+        )
     );
   }
 
   Widget _buildOutfitCardPlaceholder(String? imageUrl) {
     bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
     return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [ BoxShadow(color: Colors.black12, blurRadius: 4, spreadRadius: 1) ]
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: !hasImage
-                ? const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text("Add items to see outfits", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Archivo'))
-                    ]
-                )
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Center(child: Text("Outfit Placeholder"))
-                )
-          ),
-          if (hasImage) ...[
-            const SizedBox(height: 8),
-            const Text("AI Outfit", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontFamily: 'Archivo'), maxLines: 2, overflow: TextOverflow.ellipsis)
-          ]
-        ]
-      )
+        width: 150,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [ BoxShadow(color: Colors.black12, blurRadius: 4, spreadRadius: 1) ]
+        ),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                  child: !hasImage
+                      ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text("Add items to see outfits", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Archivo'))
+                      ]
+                  )
+                      : ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Center(child: Text("Outfit Placeholder"))
+                  )
+              ),
+              if (hasImage) ...[
+                const SizedBox(height: 8),
+                const Text("AI Outfit", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontFamily: 'Archivo'), maxLines: 2, overflow: TextOverflow.ellipsis)
+              ]
+            ]
+        )
     );
   }
 
@@ -1484,40 +1671,40 @@ class _ClosetPageState extends State<ClosetPage> {
     required VoidCallback onAddItem,
   }) {
     return SizedBox(
-      height: 201,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length + 1, // +1 for the "Add Item" card
-        padding: EdgeInsets.zero,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 12.0),
-              child: _buildAddItemCard(
-                context: context,
-                fontFamily: fontFamily,
-                onTap: onAddItem
-              )
-            );
-          }
-          
-          final item = items[index - 1];
-          return Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: _buildClosetItemCard(
-              context: context,
-              item: item,
-              fontFamily: fontFamily,
-              onTap: () => onTap(item),
-              onEditTap: () => onEdit(item),
-              onDeleteTap: () => onDelete(item)
-            )
-          );
-        }
-      )
+        height: 201,
+        child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length + 1, // +1 for the "Add Item" card
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: _buildAddItemCard(
+                        context: context,
+                        fontFamily: fontFamily,
+                        onTap: onAddItem
+                    )
+                );
+              }
+
+              final item = items[index - 1];
+              return Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: _buildClosetItemCard(
+                      context: context,
+                      item: item,
+                      fontFamily: fontFamily,
+                      onTap: () => onTap(item),
+                      onEditTap: () => onEdit(item),
+                      onDeleteTap: () => onDelete(item)
+                  )
+              );
+            }
+        )
     );
   }
-  
+
   // Helper method to build a closet item card
   Widget _buildClosetItemCard({
     required BuildContext context,
@@ -1528,218 +1715,218 @@ class _ClosetPageState extends State<ClosetPage> {
     VoidCallback? onDeleteTap,
   }) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 143,
-        height: 201,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3F3F3),
-          borderRadius: BorderRadius.circular(10)
-        ),
-        child: Stack(
-          children: [
-            // Item image or placeholder
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: item.imageUrl != null
-                  ? Image.network(
-                      item.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => 
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.checkroom, size: 60, color: Colors.grey),
-                              const SizedBox(height: 8),
-                              Text(
-                                item.name,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: fontFamily,
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600
-                                ),
-                              ),
-                              Text(
-                                item.color,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: fontFamily,
-                                  fontSize: 12,
-                                  color: Colors.grey
-                                ),
-                              ),
-                            ],
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+            width: 143,
+            height: 201,
+            decoration: BoxDecoration(
+                color: const Color(0xFFF3F3F3),
+                borderRadius: BorderRadius.circular(10)
+            ),
+            child: Stack(
+                children: [
+                  // Item image or placeholder
+                  Positioned.fill(
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: item.imageUrl != null
+                              ? Image.network(
+                              item.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.checkroom, size: 60, color: Colors.grey),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            item.name,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                fontFamily: fontFamily,
+                                                fontSize: 14,
+                                                color: Colors.grey.shade600
+                                            ),
+                                          ),
+                                          Text(
+                                            item.color,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                fontFamily: fontFamily,
+                                                fontSize: 12,
+                                                color: Colors.grey
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                  )
                           )
-                        )
-                    )
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.checkroom, size: 60, color: Colors.grey),
-                          const SizedBox(height: 8),
-                          Text(
-                            item.name,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: fontFamily,
-                              fontSize: 14,
-                              color: Colors.grey.shade600
-                            ),
-                          ),
-                          Text(
-                            item.color,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: fontFamily,
-                              fontSize: 12,
-                              color: Colors.grey
-                            ),
-                          ),
-                        ],
+                              : Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.checkroom, size: 60, color: Colors.grey),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    item.name,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontFamily: fontFamily,
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600
+                                    ),
+                                  ),
+                                  Text(
+                                    item.color,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontFamily: fontFamily,
+                                        fontSize: 12,
+                                        color: Colors.grey
+                                    ),
+                                  ),
+                                ],
+                              )
+                          )
                       )
-                    )
-              )
-            ),
-            
-            // Edit button
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _buildItemCardOverlayButton(
-                onTap: onEditTap,
-                icon: Icons.edit_outlined
-              )
-            ),
-            
-            // Delete button
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: _buildItemCardOverlayButton(
-                onTap: onDeleteTap,
-                icon: Icons.delete_outline
-              )
-            ),
-          ]
+                  ),
+
+                  // Edit button
+                  Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _buildItemCardOverlayButton(
+                          onTap: onEditTap,
+                          icon: Icons.edit_outlined
+                      )
+                  ),
+
+                  // Delete button
+                  Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: _buildItemCardOverlayButton(
+                          onTap: onDeleteTap,
+                          icon: Icons.delete_outline
+                      )
+                  ),
+                ]
+            )
         )
-      )
     );
   }
-  
+
   Widget _buildSectionHeader({required BuildContext context, required String title, required String fontFamily, required VoidCallback onNavigate}) {
     bool isMainTitle = title == "My Closet Outfits";
     return Padding(
-      padding: EdgeInsets.only(top: isMainTitle ? 0 : 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(title, style: TextStyle(fontSize: isMainTitle ? 25 : 24, fontWeight: FontWeight.w500, letterSpacing: -0.02 * (isMainTitle ? 25 : 24), color: Colors.black, fontFamily: fontFamily)),
-          TextButton(
-            onPressed: onNavigate,
-            child: Text("View all", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 15, color: Colors.black.withOpacity(0.65), fontFamily: fontFamily))
-          )
-        ]
-      )
+        padding: EdgeInsets.only(top: isMainTitle ? 0 : 16.0),
+        child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(title, style: TextStyle(fontSize: isMainTitle ? 25 : 24, fontWeight: FontWeight.w500, letterSpacing: -0.02 * (isMainTitle ? 25 : 24), color: Colors.black, fontFamily: fontFamily)),
+              TextButton(
+                  onPressed: onNavigate,
+                  child: Text("View all", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 15, color: Colors.black.withOpacity(0.65), fontFamily: fontFamily))
+              )
+            ]
+        )
     );
   }
 
   Widget _buildCategorySummaryCard({required String title, required int count, required IconData icon, required Color bgColor, required String fontFamily}) {
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 10.0),
-      decoration: BoxDecoration(color: const Color(0xFFF6F1EE), borderRadius: BorderRadius.circular(5)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(width: 40, height: 40, decoration: BoxDecoration(shape: BoxShape.circle, color: bgColor), child: Center(child: Icon(icon, size: 23, color: Colors.black.withOpacity(0.8)))),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 16, color: Colors.black, fontFamily: fontFamily), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 1),
-                Text("$count OUTFIT${count == 1 ? '' : 'S'}", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 12, color: Colors.black.withOpacity(0.65), fontFamily: fontFamily))
-              ]
-            )
-          )
-        ]
-      )
+        height: 72,
+        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+        decoration: BoxDecoration(color: const Color(0xFFF6F1EE), borderRadius: BorderRadius.circular(5)),
+        child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(width: 40, height: 40, decoration: BoxDecoration(shape: BoxShape.circle, color: bgColor), child: Center(child: Icon(icon, size: 23, color: Colors.black.withOpacity(0.8)))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 16, color: Colors.black, fontFamily: fontFamily), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 1),
+                        Text("$count OUTFIT${count == 1 ? '' : 'S'}", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 12, color: Colors.black.withOpacity(0.65), fontFamily: fontFamily))
+                      ]
+                  )
+              )
+            ]
+        )
     );
   }
 
   Widget _buildFilterChipsRow({required BuildContext context, required List<String> filters, required String selectedFilter, required String fontFamily, required ValueChanged<String> onFilterSelected}) {
     return SizedBox(
-      height: 48,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        padding: EdgeInsets.zero,
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final isSelected = filter == selectedFilter;
-          BoxDecoration decoration = BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFD7D7D7)),
-            color: isSelected ? const Color(0xFFF6F1EE) : Colors.transparent
-          );
-          return GestureDetector(
-            onTap: () => onFilterSelected(filter),
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: decoration,
-              alignment: Alignment.center,
-              child: Text(filter, style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 14, color: Colors.black))
-            )
-          );
-        }
-      )
+        height: 48,
+        child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: filters.length,
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) {
+              final filter = filters[index];
+              final isSelected = filter == selectedFilter;
+              BoxDecoration decoration = BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD7D7D7)),
+                  color: isSelected ? const Color(0xFFF6F1EE) : Colors.transparent
+              );
+              return GestureDetector(
+                  onTap: () => onFilterSelected(filter),
+                  child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: decoration,
+                      alignment: Alignment.center,
+                      child: Text(filter, style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 14, color: Colors.black))
+                  )
+              );
+            }
+        )
     );
   }
 
   Widget _buildAddItemCard({required BuildContext context, required String fontFamily, required VoidCallback onTap}) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 128,
-        height: 201,
-        decoration: BoxDecoration(color: const Color(0xFFF6F1EE), borderRadius: BorderRadius.circular(10)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 43,
-              height: 43,
-              decoration: const BoxDecoration(color: Color(0xFFD55F5F), shape: BoxShape.circle),
-              child: const Center(child: Icon(Icons.add, color: Colors.white, size: 24))
-            ),
-            const SizedBox(height: 15),
-            Text("New Item", textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.02 * 14, color: Colors.black))
-          ]
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+            width: 128,
+            height: 201,
+            decoration: BoxDecoration(color: const Color(0xFFF6F1EE), borderRadius: BorderRadius.circular(10)),
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                      width: 43,
+                      height: 43,
+                      decoration: const BoxDecoration(color: Color(0xFFD55F5F), shape: BoxShape.circle),
+                      child: const Center(child: Icon(Icons.add, color: Colors.white, size: 24))
+                  ),
+                  const SizedBox(height: 15),
+                  Text("New Item", textAlign: TextAlign.center, style: TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: -0.02 * 14, color: Colors.black))
+                ]
+            )
         )
-      )
     );
   }
 
   Widget _buildItemCardOverlayButton({required IconData icon, VoidCallback? onTap}) {
     return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 1.0,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(width: 33, height: 33, decoration: const BoxDecoration(shape: BoxShape.circle), child: Center(child: Icon(icon, size: 17, color: Colors.black.withOpacity(0.7))))
-      )
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 1.0,
+        child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Container(width: 33, height: 33, decoration: const BoxDecoration(shape: BoxShape.circle), child: Center(child: Icon(icon, size: 17, color: Colors.black.withOpacity(0.7))))
+        )
     );
   }
 
@@ -1756,6 +1943,18 @@ class _ClosetPageState extends State<ClosetPage> {
             subcategory: subcategory,
             closetItems: _closetItems,
           ),
+        ),
+      );
+    }
+  }
+
+  void _navigateToAIStylist() async {
+    final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+    if (homeScreenState != null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AIStylistPage(userId: homeScreenState.widget.userId, token: homeScreenState.widget.token),
         ),
       );
     }
@@ -1778,7 +1977,7 @@ class ProfilePage extends StatefulWidget {
   final List<String> userExcludedCategories;
   final Function(Map<String, dynamic>) onPreferencesUpdate;
   final String token;
-  
+
   const ProfilePage({
     required this.userInitial,
     this.userImageUrl,
@@ -1795,7 +1994,7 @@ class ProfilePage extends StatefulWidget {
     required this.token,
     super.key
   });
-  
+
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
@@ -1804,23 +2003,23 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
   UserProfile? _userProfile;
   String? _profileImageUrl;
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
     _loadProfilePicture();
   }
-  
+
   Future<void> _loadUserProfile() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final profileService = ProfileService(token: widget.token);
       final profile = await profileService.getUserProfile();
-      
+
       setState(() {
         _userProfile = profile;
         _isLoading = false;
@@ -1830,10 +2029,10 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error loading profile'))
+            const SnackBar(content: Text('Error loading profile'))
         );
       }
     }
@@ -1844,7 +2043,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final profileService = ProfileService(token: widget.token);
       final imageUrl = await profileService.getProfilePicture();
-      
+
       if (mounted) {
         setState(() {
           _profileImageUrl = imageUrl;
@@ -1884,29 +2083,29 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         },
       );
-      
+
       if (source == null) return; // User canceled the selection
-      
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: source,
         imageQuality: 70, // Reduce image quality to save space
         maxWidth: 500,    // Limit image dimensions
       );
-      
+
       if (image != null) {
         setState(() {
           _isLoading = true;
         });
-        
+
         final profileService = ProfileService(token: widget.token);
         final result = await profileService.uploadProfilePicture(image.path);
-        
+
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
-          
+
           if (result['success']) {
             // If the server returned an image URL, use it directly
             if (result.containsKey('url')) {
@@ -1917,13 +2116,13 @@ class _ProfilePageState extends State<ProfilePage> {
               // Otherwise reload the profile picture
               _loadProfilePicture();
             }
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile picture updated successfully'))
+                const SnackBar(content: Text('Profile picture updated successfully'))
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to update profile picture'))
+                const SnackBar(content: Text('Failed to update profile picture'))
             );
           }
         }
@@ -1934,31 +2133,31 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error updating profile picture'))
+            const SnackBar(content: Text('Error updating profile picture'))
         );
       }
     }
   }
-  
+
   void _navigateToChangePreferences() async {
     final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChangePreferencesPage(
-          initialFit: widget.userFitPreference,
-          initialLifestyle: widget.userLifestylePreference,
-          initialSeason: widget.userSeasonPreference,
-          initialAgeGroup: widget.userAgeGroup,
-          initialColors: widget.userPreferredColors,
-          initialExclusions: widget.userExcludedCategories,
-          onSave: widget.onPreferencesUpdate,
-          token: widget.token,
+        context,
+        MaterialPageRoute(
+            builder: (context) => ChangePreferencesPage(
+              initialFit: widget.userFitPreference,
+              initialLifestyle: widget.userLifestylePreference,
+              initialSeason: widget.userSeasonPreference,
+              initialAgeGroup: widget.userAgeGroup,
+              initialColors: widget.userPreferredColors,
+              initialExclusions: widget.userExcludedCategories,
+              onSave: widget.onPreferencesUpdate,
+              token: widget.token,
+            )
         )
-      )
     );
-    
+
     if (result == true) {
       // Preferences were updated, reload profile
       _loadUserProfile();
@@ -1967,17 +2166,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _navigateToMyInformation() async {
     final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MyInformationPage(
-          userName: widget.userName,
-          userEmail: widget.userEmail,
-          userPhone: widget.userPhone,
-          token: widget.token,
+        context,
+        MaterialPageRoute(
+            builder: (context) => MyInformationPage(
+              userName: widget.userName,
+              userEmail: widget.userEmail,
+              userPhone: widget.userPhone,
+              token: widget.token,
+            )
         )
-      )
     );
-    
+
     if (result != null) {
       // User info was updated with returned profile
       if (result is UserProfile) {
@@ -1985,7 +2184,7 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _userProfile = result;
         });
-        
+
         // Update parent state with profile data
         widget.onPreferencesUpdate({
           'fit': result.fitPreference,
@@ -2001,33 +2200,33 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
   }
-  
+
   void _navigateToChangePassword() async {
     final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChangePasswordPage(token: widget.token)
-      )
+        context,
+        MaterialPageRoute(
+            builder: (context) => ChangePasswordPage(token: widget.token)
+        )
     );
-    
+
     if (result == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed successfully'))
+          const SnackBar(content: Text('Password changed successfully'))
       );
     }
   }
-  
+
   void _navigateToFeedback() async {
     final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SendFeedbackPage(token: widget.token)
-      )
+        context,
+        MaterialPageRoute(
+            builder: (context) => SendFeedbackPage(token: widget.token)
+        )
     );
-    
+
     if (result == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Feedback sent successfully'))
+          const SnackBar(content: Text('Feedback sent successfully'))
       );
     }
   }
@@ -2041,7 +2240,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     }
-    
+
     // Use either the loaded profile data or fall back to the props passed from parent
     final userName = _userProfile?.name ?? widget.userName;
     final userEmail = _userProfile?.email ?? widget.userEmail;
@@ -2054,15 +2253,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final ageGroup = _userProfile?.ageGroup ?? widget.userAgeGroup;
     final preferredColors = _userProfile?.preferredColors ?? widget.userPreferredColors;
     final excludedCategories = _userProfile?.excludedCategories ?? widget.userExcludedCategories;
-    
+
     const String defaultFontFamily = 'Archivo';
-    
+
     String getFullImageUrl(String? path) {
       if (path == null) return '';
       if (path.startsWith('http')) return path;
       return 'http://10.0.2.2:8000/static/$path'; // Adjust for your setup or use Config.apiUrl
     }
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F2EF),
       body: SafeArea(
@@ -2085,29 +2284,29 @@ class _ProfilePageState extends State<ProfilePage> {
                             backgroundColor: Colors.white, // Make the background white if no image
                             child: imageUrl != null && imageUrl.isNotEmpty
                                 ? ClipOval(
-                                    child: Image.network(
-                                      getFullImageUrl(imageUrl),
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Center(
-                                        child: Text(
-                                          userInitial,
-                                          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
-                                        ),
-                                      ),
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return const Center(child: CircularProgressIndicator());
-                                      },
-                                    ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      userInitial,
-                                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
-                                    ),
+                              child: Image.network(
+                                getFullImageUrl(imageUrl),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Center(
+                                  child: Text(
+                                    userInitial,
+                                    style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
                                   ),
+                                ),
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(child: CircularProgressIndicator());
+                                },
+                              ),
+                            )
+                                : Center(
+                              child: Text(
+                                userInitial,
+                                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500, color: Colors.black54, fontFamily: 'Archivo'),
+                              ),
+                            ),
                           ),
                         ),
                         // Edit Icon
@@ -2248,14 +2447,14 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       subtitle: subtitle != null
           ? Text(
-              subtitle,
-              style: TextStyle(
-                color: Colors.black54,
-                fontFamily: 'Archivo',
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
+        subtitle,
+        style: TextStyle(
+          color: Colors.black54,
+          fontFamily: 'Archivo',
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      )
           : null,
       trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD55F5F)),
       onTap: onTap,
@@ -2289,7 +2488,7 @@ class _ProfilePageState extends State<ProfilePage> {
     // TODO: Clear user session/token here if you use persistent login (e.g., SharedPreferences)
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
+          (route) => false,
     );
   }
 }
@@ -2495,3 +2694,58 @@ class PreferencesPreviewDialog extends StatelessWidget {
     );
   }
 }
+
+Widget _buildModernOutfitPreviewCard(Outfit outfit) {
+  // Modern card: rounded, shadow, theme color, stacked/overlapping images, no tags
+  return Container(
+    width: 110,
+    decoration: BoxDecoration(
+      color: const Color(0xFFFDFDFD),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 8, offset: const Offset(0, 4))],
+    ),
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        if (outfit.itemImageUrls.length > 2)
+          Positioned(
+            left: 24,
+            top: 24,
+            child: _buildOutfitItemImage(outfit.itemImageUrls[2], 44, 0.5),
+          ),
+        if (outfit.itemImageUrls.length > 1)
+          Positioned(
+            left: 12,
+            top: 12,
+            child: _buildOutfitItemImage(outfit.itemImageUrls[1], 52, 0.7),
+          ),
+        if (outfit.itemImageUrls.isNotEmpty)
+          _buildOutfitItemImage(outfit.itemImageUrls[0], 60, 1.0),
+      ],
+    ),
+  );
+}
+
+Widget _buildOutfitItemImage(String url, double size, double opacity) {
+  return Opacity(
+    opacity: opacity,
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey[200],
+          child: const Icon(Icons.broken_image, size: 20, color: Colors.grey),
+        ),
+      ),
+    ),
+  );
+}
+
+// Helper to normalize image paths
+String normalizeImagePath(String path) => path.replaceAll('\\', '/');

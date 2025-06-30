@@ -9,9 +9,15 @@ class OutfitService {
   
   OutfitService({required this.token});
   
+  // Helper function to normalize image paths (replace backslashes with forward slashes)
+  String _normalizeImagePath(String path) {
+    return path.replaceAll('\\', '/');
+  }
+  
   // Get all outfits for the logged-in user
   Future<List<Outfit>> getUserOutfits() async {
     try {
+      print('DEBUG: getUserOutfits called with token: $token');
       final response = await http.get(
         Uri.parse('$baseUrl/outfits'),
         headers: {
@@ -19,15 +25,16 @@ class OutfitService {
           'Content-Type': 'application/json',
         },
       );
-      
+      print('DEBUG: getUserOutfits response status: \\${response.statusCode}');
+      print('DEBUG: getUserOutfits response body: \\${response.body}');
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
+        print('DEBUG: getUserOutfits parsed responseData length: \\${responseData.length}');
         return responseData.map((outfitData) => _parseOutfit(outfitData)).toList();
       } else {
         // Handle error
-        print('Failed to load outfits. Status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        
+        print('Failed to load outfits. Status code: \\${response.statusCode}');
+        print('Response body: \\${response.body}');
         return [];
       }
     } catch (e) {
@@ -114,25 +121,22 @@ class OutfitService {
   
   // Helper method to parse outfit data from API response
   Outfit _parseOutfit(Map<String, dynamic> data) {
-    // Extract the image URLs from the top, bottom, and shoes
-    // Add baseUrl to the paths to create full URLs
     final List<String> itemImageUrls = [
-      data['top']['path'].startsWith('http') 
-          ? data['top']['path'] 
-          : '$baseUrl/${data['top']['path']}',
-      data['bottom']['path'].startsWith('http') 
-          ? data['bottom']['path'] 
-          : '$baseUrl/${data['bottom']['path']}',
-      data['shoes']['path'].startsWith('http') 
-          ? data['shoes']['path'] 
-          : '$baseUrl/${data['shoes']['path']}',
+      _normalizeImagePath(data['top']['path']),
+      _normalizeImagePath(data['bottom']['path']),
+      _normalizeImagePath(data['shoes']['path']),
     ];
-    
     return Outfit(
       id: data['id'].toString(),
       itemImageUrls: itemImageUrls,
       tags: List<String>.from(data['tags'] ?? []),
       isFavorite: data['is_favorite'] ?? false,
+      top: data['top'] ?? {},
+      bottom: data['bottom'] ?? {},
+      shoes: data['shoes'] ?? {},
     );
   }
+
+  // Helper to normalize image paths
+  String normalizeImagePath(String path) => path.replaceAll('\\', '/');
 } 

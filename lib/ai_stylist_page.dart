@@ -3,9 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'ai_stylist_camera_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AIStylistPage extends StatefulWidget {
+  final int userId;
+  final String token;
+  const AIStylistPage({required this.userId, required this.token, Key? key}) : super(key: key);
+
   @override
   _AIStylistPageState createState() => _AIStylistPageState();
 }
@@ -14,19 +17,10 @@ class _AIStylistPageState extends State<AIStylistPage> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, String>> chatHistory = [];
   bool _isLoading = false;
-  String? _userId;
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserId();
-  }
-
-  Future<void> _loadUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _userId = prefs.getString('user_id');
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
   }
 
   Future<void> sendMessage(String message) async {
@@ -41,7 +35,7 @@ class _AIStylistPageState extends State<AIStylistPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'query': message,
-          'user_id': _userId,
+          'user_id': widget.userId,
         }),
       );
 
@@ -147,7 +141,10 @@ class _AIStylistPageState extends State<AIStylistPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const AIStylistCameraScreen(),
+                                builder: (context) => AIStylistCameraScreen(
+                                  userId: widget.userId,
+                                  token: widget.token,
+                                ),
                               ),
                             );
                           },

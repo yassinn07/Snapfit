@@ -7,6 +7,7 @@ import 'services/shop_service.dart'; // Import ShopService for fetching items
 import 'liked_items_screen.dart'; // For navigation
 import 'services/profile_service.dart';
 import 'item_screen.dart'; // Import ItemScreen
+import 'config.dart'; // Import Config
 
 // Define FilterType if not in a separate file
 enum FilterType { category, brand }
@@ -26,6 +27,9 @@ class ShopItem {
   final String size;
   final String occasion;
   final String gender;
+  final String subcategory;
+  final String brand;
+  final String? source; // 'closet' or 'shop' for AI stylist recommendations
 
   ShopItem({
     required this.id,
@@ -41,7 +45,48 @@ class ShopItem {
     this.size = "",
     this.occasion = "",
     this.gender = "",
+    this.subcategory = "",
+    this.brand = "",
+    this.source, // optional
   });
+
+  ShopItem copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? category,
+    String? userName,
+    String? price,
+    String? imageUrl,
+    bool? isFavorite,
+    String? purchaseLink,
+    String? color,
+    String? size,
+    String? occasion,
+    String? gender,
+    String? subcategory,
+    String? brand,
+    String? source,
+  }) {
+    return ShopItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      userName: userName ?? this.userName,
+      price: price ?? this.price,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isFavorite: isFavorite ?? this.isFavorite,
+      purchaseLink: purchaseLink ?? this.purchaseLink,
+      color: color ?? this.color,
+      size: size ?? this.size,
+      occasion: occasion ?? this.occasion,
+      gender: gender ?? this.gender,
+      subcategory: subcategory ?? this.subcategory,
+      brand: brand ?? this.brand,
+      source: source ?? this.source,
+    );
+  }
 }
 
 
@@ -442,7 +487,7 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                       borderRadius: BorderRadius.circular(10),
                       child: item.imageUrl != null
                           ? Image.network(
-                              item.imageUrl!,
+                              _buildImageUrl(item.imageUrl),
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   const Center(child: Icon(Icons.image_not_supported_outlined, size: 50, color: Colors.grey)),
@@ -531,6 +576,12 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
         ),
       ),
     );
+  }
+
+  String _buildImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return '';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return '${Config.apiUrl}/static/$imageUrl';
   }
 
 } // End _FilteredShopPageState

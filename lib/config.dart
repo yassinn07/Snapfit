@@ -13,7 +13,7 @@ class Config {
       return 'http://localhost:8000';    // iOS Simulator
     } else {
       // Fallback for physical devices (use your machine's LAN IP)
-      return 'http://192.168.1.13:8000';  // Replace with your actual IP
+      return 'http://192.168.1.2:8000';  // Replace with your actual IP
     }
   }
 

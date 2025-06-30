@@ -217,4 +217,41 @@ class ShopService {
       return [];
     }
   }
+
+  // Fetch a single shop item by ID
+  Future<ShopItem?> getShopItemById(String id) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Config.apiUrl}/shop/items/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_authToken',
+        },
+      );
+      if (response.statusCode == 200) {
+        final itemData = json.decode(response.body);
+        return ShopItem(
+          id: itemData['id'].toString(),
+          name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
+          description: itemData['description'] ?? '',
+          category: itemData['apparel_type'] ?? 'Unknown',
+          userName: itemData['user_name'] ?? 'Unknown',
+          price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
+          imageUrl: itemData['path'],
+          purchaseLink: itemData['purchase_link'],
+          isFavorite: false,
+          color: itemData['color'] ?? '',
+          size: itemData['size'] ?? '',
+          occasion: itemData['occasion'] ?? '',
+          gender: itemData['gender'] ?? '',
+          subcategory: itemData['subcategory'] ?? '',
+          brand: itemData['brand'] ?? '',
+          source: 'shop',
+        );
+      }
+    } catch (e) {
+      print('Error fetching shop item by id: $e');
+    }
+    return null;
+  }
 } 

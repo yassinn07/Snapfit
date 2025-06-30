@@ -89,6 +89,9 @@ Widget buildClosetItemsRow({
   );
 }
 
+// Helper to normalize image paths
+String normalizeImagePath(String path) => path.replaceAll('\\', '/');
+
 class ClosetItemDetailsDialog extends StatelessWidget {
   final ClosetItem item;
   final String fontFamily;
@@ -110,7 +113,7 @@ class ClosetItemDetailsDialog extends StatelessWidget {
                 ? Image.network(
                     item.imageUrl!.startsWith('http')
                         ? item.imageUrl!
-                        : 'http://10.0.2.2:8000/static/${item.imageUrl!}',
+                        : 'http://10.0.2.2:8000/static/${normalizeImagePath(item.imageUrl!)}',
                     width: double.infinity,
                     height: 220,
                     fit: BoxFit.cover,
@@ -210,7 +213,7 @@ Widget buildClosetItemCard({
                 ? Image.network(
                     item.imageUrl!.startsWith('http')
                       ? item.imageUrl!
-                      : 'http://10.0.2.2:8000/static/${item.imageUrl!}',
+                      : 'http://10.0.2.2:8000/static/${normalizeImagePath(item.imageUrl!)}',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: Colors.grey[200],
@@ -290,7 +293,45 @@ Widget buildClosetItemCard({
             right: 8,
             child: buildItemCardOverlayButton(
               icon: Icons.delete_outline,
-              onTap: onDeleteTap,
+              onTap: onDeleteTap == null ? null : () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFFFDF9F7),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    title: const Text('Delete Item', style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black)),
+                    content: const Text('Are you sure you want to delete this item?', style: TextStyle(fontFamily: 'Archivo', fontSize: 16, color: Colors.black)),
+                    actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Color(0xFFD55F5F),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                          textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('Yes'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          backgroundColor: Color(0xFFF3F3F3),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                          textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('No'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  onDeleteTap();
+                }
+              },
             ),
           ),
         ],

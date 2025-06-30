@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 // import 'dart:math'; // Example if needed for random data later
 import 'services/outfit_service.dart'; // Import the outfit service
+import 'item_screen.dart'; // For shop navigation
+import 'filtered_shop_page.dart'; // For ShopItem
 
 // Outfit model representing a complete outfit
 class Outfit {
@@ -10,12 +12,18 @@ class Outfit {
   final List<String> itemImageUrls; // URLs/Paths for top, bottom, shoes in order
   final List<String> tags; // e.g., ["Everyday", "Work", "Summer"]
   bool isFavorite;
+  final Map<String, dynamic> top;
+  final Map<String, dynamic> bottom;
+  final Map<String, dynamic> shoes;
 
   Outfit({
     required this.id,
     required this.itemImageUrls,
     required this.tags,
     this.isFavorite = false,
+    required this.top,
+    required this.bottom,
+    required this.shoes,
   });
 }
 
@@ -239,6 +247,9 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
     }
   }
 
+  // Helper to normalize image paths
+  String normalizeImagePath(String path) => path.replaceAll('\\', '/');
+
   @override
   Widget build(BuildContext context) {
     const String defaultFontFamily = 'Archivo';
@@ -330,19 +341,16 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                       ],
                     ),
                   )
-                : PageView.builder(
-                    controller: _pageController,
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     itemCount: _filteredOutfits.length,
                     itemBuilder: (context, index) {
                       final outfit = _filteredOutfits[index];
                       return Padding(
-                        padding: const EdgeInsets.fromLTRB(17.0, 10.0, 17.0, 10.0),
-                        child: _buildOutfitDisplayCard(
-                          context: context,
-                          outfit: outfit,
-                          fontFamily: defaultFontFamily,
-                          onFavoriteTap: () => _toggleFavorite(outfit.id),
-                          onReloadTap: () => _deleteOutfit(outfit.id),
+                        padding: const EdgeInsets.only(bottom: 18.0),
+                        child: GestureDetector(
+                          onTap: () => _showOutfitDetailModal(context, outfit, defaultFontFamily),
+                          child: _buildModernOutfitCard(outfit, defaultFontFamily, onFavoriteTap: () => _toggleFavorite(outfit.id)),
                         ),
                       );
                     },
@@ -396,90 +404,95 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
     );
   }
 
-  Widget _buildOutfitDisplayCard({required BuildContext context, required Outfit outfit, required String fontFamily, VoidCallback? onFavoriteTap, VoidCallback? onReloadTap}) {
+  Widget _buildModernOutfitCard(Outfit outfit, String fontFamily, {VoidCallback? onFavoriteTap}) {
+    // Modern card: rounded, shadow, theme color, stacked/overlapping images
     return Container(
-      decoration: BoxDecoration( color: const Color(0xFFFDFDFD), borderRadius: BorderRadius.circular(5), boxShadow: [ BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 4)) ],),
-      child: Stack(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDFDFD),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 8, offset: const Offset(0, 4))],
+      ),
+      child: Row(
         children: [
-          Positioned.fill( // Inner Grey Background
-            child: Container(
-              margin: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: const Color(0xFFF3F3F3), borderRadius: BorderRadius.circular(10)),
+          // Stacked/overlapping images
+          SizedBox(
+            width: 100,
+            height: 100,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (outfit.itemImageUrls.length > 2)
+                  Positioned(
+                    left: 24,
+                    top: 24,
+                    child: _buildOutfitItemImage(outfit.itemImageUrls[2], 52, 0.5),
+                  ),
+                if (outfit.itemImageUrls.length > 1)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _buildOutfitItemImage(outfit.itemImageUrls[1], 60, 0.7),
+                  ),
+                if (outfit.itemImageUrls.isNotEmpty)
+                  _buildOutfitItemImage(outfit.itemImageUrls[0], 68, 1.0),
+              ],
             ),
           ),
-          // Display outfit item images
-          if (outfit.itemImageUrls.isNotEmpty) ...[
-            // Top item (positioned at the top)
-            if (outfit.itemImageUrls.length > 0)
-              Positioned(
-                top: 40,
-                left: 0,
-                right: 0,
-                height: 150,
-                child: Image.network(
-                  outfit.itemImageUrls[0],
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading top image: $error');
-                    return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
-                  },
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (outfit.tags.isNotEmpty)
+                      _buildTagChip(outfit.tags[0], fontFamily),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(outfit.isFavorite ? Icons.favorite : Icons.favorite_border, color: outfit.isFavorite ? Colors.red : Colors.black.withOpacity(0.7)),
+                      onPressed: onFavoriteTap,
+                    ),
+                  ],
                 ),
-              ),
-            // Bottom item (positioned in the middle)
-            if (outfit.itemImageUrls.length > 1)
-              Positioned(
-                top: 180,
-                left: 0,
-                right: 0,
-                height: 150,
-                child: Image.network(
-                  outfit.itemImageUrls[1],
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading bottom image: $error');
-                    return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
-                  },
+                const SizedBox(height: 8),
+                Text(
+                  "Outfit #${outfit.id}",
+                  style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black),
                 ),
-              ),
-            // Shoes (positioned at the bottom)
-            if (outfit.itemImageUrls.length > 2)
-              Positioned(
-                bottom: 60,
-                left: 0,
-                right: 0,
-                height: 100,
-                child: Image.network(
-                  outfit.itemImageUrls[2],
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading shoes image: $error');
-                    return const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey));
-                  },
-                ),
-              ),
-          ] else
-            Positioned.fill(
-              child: Center(child: Icon(Icons.checkroom_outlined, size: 100, color: Colors.grey)),
+                if (outfit.tags.length > 1)
+                  Wrap(
+                    spacing: 6.0,
+                    runSpacing: 4.0,
+                    children: outfit.tags.skip(1).map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+                  ),
+              ],
             ),
-          Positioned( top: 30, left: 30, // Like/Unlike Button
-            child: _buildCardIconButton( icon: outfit.isFavorite ? Icons.favorite : Icons.favorite_border, iconColor: outfit.isFavorite ? Colors.red : Colors.black, onTap: onFavoriteTap, size: 57, iconSize: 29, ),
-          ),
-          Positioned( bottom: 30, right: 30, // Reload/Regenerate Button
-            child: _buildCardIconButton( icon: Icons.delete, onTap: onReloadTap, size: 57, iconSize: 29, ),
-          ),
-          Positioned( bottom: 30, left: 30, // Tag Display
-            child: _buildTagChip(outfit.tags.isNotEmpty ? outfit.tags[0] : "Outfit", fontFamily),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCardIconButton({required IconData icon, Color? iconColor, VoidCallback? onTap, double size = 33, double iconSize = 17}) {
-    return Material( color: Colors.white, shape: const CircleBorder(), elevation: 2.0, shadowColor: Colors.black.withOpacity(0.3),
-      child: InkWell( customBorder: const CircleBorder(), onTap: onTap,
-        child: Container( width: size, height: size, decoration: const BoxDecoration(shape: BoxShape.circle),
-          child: Center( child: Icon( icon, size: iconSize, color: iconColor ?? Colors.black.withOpacity(0.7) )),
+  Widget _buildOutfitItemImage(String url, double size, double opacity) {
+    final String imageUrl = url.startsWith('http')
+      ? url
+      : 'http://10.0.2.2:8000/static/${normalizeImagePath(url)}';
+    print('Loading image: $imageUrl');
+    return Opacity(
+      opacity: opacity,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[200],
+            child: const Icon(Icons.broken_image, size: 28, color: Colors.grey),
+          ),
         ),
       ),
     );
@@ -500,6 +513,234 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
       decoration: BoxDecoration( color: bgColor, borderRadius: BorderRadius.circular(20.0)),
       child: Text( tag, style: TextStyle( fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 17, color: Colors.black)),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, String fontFamily) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontFamily: fontFamily,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontFamily: fontFamily,
+                color: Colors.black87,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showItemDetailDialog(BuildContext context, Map<String, dynamic> item, String fontFamily) {
+    String cleanCategory = (item['apparel_type'] ?? item['category'] ?? '')
+        .toString()
+        .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), '')
+        .replaceAll('0m', '')
+        .trim();
+    String subcategory = (item['subtype'] ?? '').toString();
+    String color = (item['color'] ?? '').toString();
+    String size = (item['size'] ?? '').toString();
+    String occasion = (item['occasion'] ?? '').toString();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFFF6F1EE),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  item['name'] ?? item['subtype'] ?? 'Item Details',
+                  style: TextStyle(
+                    fontFamily: fontFamily,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                if (item['path'] != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      'http://10.0.2.2:8000/static/${normalizeImagePath(item['path'])}',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                    ),
+                  ),
+                const SizedBox(height: 18),
+                _buildDetailRow('Category', cleanCategory, fontFamily),
+                _buildDetailRow('Subcategory', subcategory, fontFamily),
+                _buildDetailRow('Color', color, fontFamily),
+                _buildDetailRow('Size', size, fontFamily),
+                _buildDetailRow('Occasion', occasion, fontFamily),
+                const SizedBox(height: 18),
+                if (item['source'] == 'shop' || item['purchase_link'] != null)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD55F5F),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ItemScreen(
+                            item: ShopItem(
+                              id: (item['id'] ?? '').toString(),
+                              name: item['name'] ?? item['subtype'] ?? '',
+                              description: item['description'] ?? '',
+                              category: cleanCategory,
+                              userName: item['user_name'] ?? '',
+                              price: item['price'] != null ? item['price'].toString() : '',
+                              imageUrl: item['path'],
+                              isFavorite: item['is_favorite'] ?? false,
+                              purchaseLink: item['purchase_link'],
+                              color: color,
+                              size: size,
+                              occasion: occasion,
+                              gender: item['gender'] ?? '',
+                              subcategory: subcategory,
+                              brand: item['brand'] ?? '',
+                              source: 'shop',
+                            ),
+                            userId: item['owner_id'] ?? 0,
+                            token: null,
+                          ),
+                        ));
+                      },
+                      child: const Text('Go to Shop'),
+                    ),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showOutfitDetailModal(BuildContext context, Outfit outfit, String fontFamily) {
+    final items = [outfit.top, outfit.bottom, outfit.shoes];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Outfit Details", style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold, fontSize: 22)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < outfit.itemImageUrls.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: GestureDetector(
+                        onTap: () => _showItemDetailDialog(context, items[i], fontFamily),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: (() {
+                            final String imageUrl = outfit.itemImageUrls[i].startsWith('http')
+                              ? outfit.itemImageUrls[i]
+                              : 'http://10.0.2.2:8000/static/${normalizeImagePath(outfit.itemImageUrls[i])}';
+                            print('Loading image: $imageUrl');
+                            return Image.network(
+                              imageUrl,
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 90,
+                                height: 90,
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.broken_image, size: 32, color: Colors.grey),
+                              ),
+                            );
+                          })(),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              if (outfit.tags.isNotEmpty)
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 4.0,
+                  children: outfit.tags.map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+                ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(outfit.isFavorite ? Icons.favorite : Icons.favorite_border, color: outfit.isFavorite ? Colors.red : Colors.black.withOpacity(0.7)),
+                    onPressed: () {
+                      _toggleFavorite(outfit.id);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.black54),
+                    onPressed: () {
+                      _deleteOutfit(outfit.id);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

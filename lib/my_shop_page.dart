@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'liked_items_screen.dart';
 import 'services/profile_service.dart';
+import 'config.dart';
 
 class MyShopPage extends StatefulWidget {
   final String? token;
@@ -88,6 +89,12 @@ class _MyShopPageState extends State<MyShopPage> {
     }
   }
 
+  String _buildImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return '';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return '${Config.apiUrl}/static/$imageUrl';
+  }
+
   @override
   Widget build(BuildContext context) {
     const String fontFamily = 'Archivo';
@@ -155,7 +162,7 @@ class _MyShopPageState extends State<MyShopPage> {
                                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                   child: item['image_url'] != null && item['image_url'].toString().isNotEmpty
                                       ? Image.network(
-                                          item['image_url'],
+                                          _buildImageUrl(item['image_url']),
                                           fit: BoxFit.cover,
                                           width: double.infinity,
                                           errorBuilder: (context, error, stackTrace) {

@@ -26,6 +26,8 @@ class AllCategoryItemsPage extends StatelessWidget {
     if (subcategory != null &&
         subcategory != "All Upper Body" &&
         subcategory != "All Lower Body" &&
+        subcategory != "All Dress" &&
+        subcategory != "All Bags" &&
         subcategory != "All Shoes") {
       filteredItems = filteredItems
           .where((item) => item.subcategory.toLowerCase() == subcategory!.toLowerCase())
@@ -53,28 +55,28 @@ class AllCategoryItemsPage extends StatelessWidget {
       body: filteredItems.isEmpty
           ? const Center(child: Text('No items found.'))
           : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.7,
-                ),
-                itemCount: filteredItems.length,
-                itemBuilder: (context, index) {
-                  final item = filteredItems[index];
-                  return buildClosetItemCard(
-                    context: context,
-                    item: item,
-                    fontFamily: defaultFontFamily,
-                    onTap: () {},
-                    onEditTap: null,
-                    onDeleteTap: null,
-                  );
-                },
-              ),
-            ),
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.7,
+          ),
+          itemCount: filteredItems.length,
+          itemBuilder: (context, index) {
+            final item = filteredItems[index];
+            return buildClosetItemCard(
+              context: context,
+              item: item,
+              fontFamily: defaultFontFamily,
+              onTap: () {},
+              onEditTap: null,
+              onDeleteTap: null,
+            );
+          },
+        ),
+      ),
     );
   }
 } 
