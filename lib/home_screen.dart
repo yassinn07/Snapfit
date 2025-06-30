@@ -163,6 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
         userAgeGroup: _userAgeGroup,
         userPreferredColors: _userPreferredColors,
         userExcludedCategories: _userExcludedCategories,
+        token: widget.token,
         onChangePreferences: () async {
           final result = await Navigator.push(
             context,
@@ -329,6 +330,7 @@ class HomePage extends StatefulWidget {
   final List<String> userPreferredColors;
   final List<String> userExcludedCategories;
   final VoidCallback? onChangePreferences;
+  final String token;
 
   const HomePage({
     required this.userFitPreference,
@@ -337,6 +339,7 @@ class HomePage extends StatefulWidget {
     required this.userAgeGroup,
     required this.userPreferredColors,
     required this.userExcludedCategories,
+    required this.token,
     this.onChangePreferences,
     super.key,
   });
@@ -402,18 +405,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _navigateToMyOutfits(String? filterCategory) {
+  void _navigateToMyOutfits(String? filterCategory) async {
     final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
     if (homeScreenState != null) {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => MyOutfitsPage(
-                  initialFilter: filterCategory,
-                  token: homeScreenState.widget.token
-              )
-          )
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MyOutfitsPage(
+            initialFilter: filterCategory,
+            token: homeScreenState.widget.token,
+          ),
+        ),
       );
+      // Refresh counters after returning
+      // await _loadOutfitsAndCounters(); // Removed: Only ClosetPage should call this
     }
   }
 
@@ -445,71 +450,90 @@ class _HomePageState extends State<HomePage> {
           child: Image.asset('assets/logo_small.png', errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_outlined, color: Colors.grey)),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => PreferencesPreviewDialog(
-                            fit: widget.userFitPreference,
-                            lifestyle: widget.userLifestylePreference,
-                            season: widget.userSeasonPreference,
-                            ageGroup: widget.userAgeGroup,
-                            colors: widget.userPreferredColors,
-                            exclusions: widget.userExcludedCategories,
+      body: RefreshIndicator(
+        onRefresh: _loadOutfits,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => PreferencesPreviewDialog(
+                              fit: widget.userFitPreference,
+                              lifestyle: widget.userLifestylePreference,
+                              season: widget.userSeasonPreference,
+                              ageGroup: widget.userAgeGroup,
+                              colors: widget.userPreferredColors,
+                              exclusions: widget.userExcludedCategories,
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "My Preferences",
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.02 * 25,
+                            color: Colors.black,
+                            fontFamily: defaultFontFamily,
                           ),
-                        );
-                      },
-                      child: const Text(
-                        "My Preferences",
-                        style: TextStyle(
-                          fontSize: 25,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -0.02 * 25,
-                          color: Colors.black,
-                          fontFamily: defaultFontFamily,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
+                    const SizedBox(width: 10),
+                  ],
+                ),
               ),
-            ),
-            buildNewPreferencesPreview(
-              fit: widget.userFitPreference,
-              lifestyle: widget.userLifestylePreference,
-              season: widget.userSeasonPreference,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 17.0, top: 20.0, bottom: 10.0),
-              child: Text("My Outfits", style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 23, color: Colors.black, fontFamily: defaultFontFamily)),
-            ),
-            SizedBox(
-              height: 310,
-              child: ListView.builder(
+              buildNewPreferencesPreview(
+                fit: widget.userFitPreference,
+                lifestyle: widget.userLifestylePreference,
+                season: widget.userSeasonPreference,
+              ),
+              const Padding(
+                padding: EdgeInsets.only(left: 17.0, top: 20.0, bottom: 10.0),
+                child: Text("My Outfits", style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 23, color: Colors.black, fontFamily: defaultFontFamily)),
+              ),
+              SizedBox(
+                height: 310,
+                child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 17),
                   scrollDirection: Axis.horizontal,
-                  itemCount: outfits.length,
+                  itemCount: outfits.length > 3 ? 3 : outfits.length,
                   itemBuilder: (context, index) {
                     final outfit = outfits[index];
-                    return _buildOutfitPreviewCard(outfit, defaultFontFamily);
-                  }
+                    return GestureDetector(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MyOutfitsPage(
+                              initialFilter: null,
+                              token: widget.token,
+                              initialOutfitId: outfit.id,
+                            ),
+                          ),
+                        );
+                        // Optionally, you can implement logic to scroll to the tapped outfit inside MyOutfitsPage
+                      },
+                      child: _buildOutfitPreviewCard(outfit, defaultFontFamily),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -553,10 +577,12 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           if (outfit.tags.isNotEmpty)
-            Wrap(
-              spacing: 6.0,
-              runSpacing: 4.0,
-              children: outfit.tags.map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+            Flexible(
+              child: Wrap(
+                spacing: 6.0,
+                runSpacing: 4.0,
+                children: outfit.tags.map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+              ),
             ),
         ],
       ),
@@ -1126,7 +1152,7 @@ class _ClosetPageState extends State<ClosetPage> {
       final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
       if (homeScreenState != null) {
         final closetService = ClosetService(token: homeScreenState.widget.token);
-        final success = await closetService.deleteClosetItem(itemId);
+        final (success, errorMsg) = await closetService.deleteClosetItem(itemId);
 
         if (success && mounted) {
           setState(() {
@@ -1134,7 +1160,21 @@ class _ClosetPageState extends State<ClosetPage> {
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Item deleted successfully'))
+            SnackBar(
+              content: Text('Item deleted successfully', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg ?? 'Failed to delete item', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }
@@ -1142,24 +1182,31 @@ class _ClosetPageState extends State<ClosetPage> {
       print('Error deleting item: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error deleting item'))
+          SnackBar(
+            content: Text('Error deleting item', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
   }
 
-  void _navigateToMyOutfits(String? filterCategory) {
+  void _navigateToMyOutfits(String? filterCategory) async {
     final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
     if (homeScreenState != null) {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => MyOutfitsPage(
-                  initialFilter: filterCategory,
-                  token: homeScreenState.widget.token
-              )
-          )
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MyOutfitsPage(
+            initialFilter: filterCategory,
+            token: homeScreenState.widget.token,
+          ),
+        ),
       );
+      // Refresh counters after returning
+      await _loadOutfitsAndCounters();
     }
   }
 
@@ -1544,41 +1591,11 @@ class _ClosetPageState extends State<ClosetPage> {
                         _deleteItem(item.id);
                       },
                       onAddItem: _navigateToAddItem
+
                   ),
-                  const SizedBox(height: 40),
-                  // My Outfits Preview Section
-                  Padding(
-                    padding: const EdgeInsets.only(top: 24.0, bottom: 8.0, left: 4.0, right: 4.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("My Outfits", style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 23, color: Colors.black, fontFamily: defaultFontFamily)),
-                        TextButton(
-                          onPressed: () => _navigateToMyOutfits(null),
-                          child: Text("View all", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 15, color: Colors.black.withOpacity(0.65), fontFamily: defaultFontFamily)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _outfits.length > 3 ? 3 : _outfits.length,
-                      itemBuilder: (context, index) {
-                        final outfit = _outfits[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 16.0),
-                          child: _buildModernOutfitPreviewCard(outfit),
-                        );
-                      },
-                    ),
-                  ),
-                ]
-            )
-        )
-    );
-  }
+
+
+  ])));}
 
   Widget _buildProgressIndicator(BuildContext context, String label, int current, int total) {
     double progress = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;

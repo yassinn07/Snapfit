@@ -111,9 +111,8 @@ class ClosetService {
     }
   }
   
-  Future<bool> deleteClosetItem(String itemId) async {
+  Future<(bool, String?)> deleteClosetItem(String itemId) async {
     final url = Uri.parse('${Config.apiUrl}/clothes/$itemId');
-    
     try {
       final response = await http.delete(
         url,
@@ -122,11 +121,19 @@ class ClosetService {
           'Authorization': 'Bearer $token',
         },
       );
-      
-      return response.statusCode == 200 || response.statusCode == 204;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return (true, null);
+      } else {
+        String errorMsg = 'Failed to delete item.';
+        try {
+          final data = json.decode(response.body);
+          if (data['detail'] != null) errorMsg = data['detail'];
+        } catch (_) {}
+        return (false, errorMsg);
+      }
     } catch (e) {
       print('Error deleting closet item: $e');
-      return false;
+      return (false, 'Error deleting item: $e');
     }
   }
   

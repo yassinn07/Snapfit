@@ -101,8 +101,42 @@ class OutfitService {
     }
   }
   
+  // Update an existing outfit
+  Future<Outfit?> updateOutfit({
+    required String outfitId,
+    String? name,
+    List<String>? tags,
+  }) async {
+    try {
+      final Map<String, dynamic> outfitData = {};
+      if (name != null) outfitData['name'] = name;
+      if (tags != null) outfitData['tags'] = tags;
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/outfits/$outfitId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(outfitData),
+      );
+      
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        return _parseOutfit(responseData);
+      } else {
+        print('Failed to update outfit. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception when updating outfit: $e');
+      return null;
+    }
+  }
+  
   // Delete an outfit
-  Future<bool> deleteOutfit(String outfitId) async {
+  Future<(bool, String?)> deleteOutfit(String outfitId) async {
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/outfits/$outfitId'),
@@ -111,11 +145,19 @@ class OutfitService {
           'Content-Type': 'application/json',
         },
       );
-      
-      return response.statusCode == 204;
+      if (response.statusCode == 204) {
+        return (true, null);
+      } else {
+        String errorMsg = 'Failed to delete outfit.';
+        try {
+          final data = json.decode(response.body);
+          if (data['detail'] != null) errorMsg = data['detail'];
+        } catch (_) {}
+        return (false, errorMsg);
+      }
     } catch (e) {
       print('Exception when deleting outfit: $e');
-      return false;
+      return (false, 'Error deleting outfit: $e');
     }
   }
   

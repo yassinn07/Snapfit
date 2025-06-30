@@ -31,8 +31,8 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
   void initState() {
     super.initState();
     _outfitItems = List.from(widget.outfitItems);
-    // Find the item without an ID (id is null or empty or negative)
-    _newItemIndex = _outfitItems.indexWhere((item) => item.id.isEmpty || int.tryParse(item.id) == null || int.tryParse(item.id)! <= 0);
+    // Only show add-item dialog if there is a missing item (id is empty or invalid AND source is not 'shop')
+    _newItemIndex = _outfitItems.indexWhere((item) => (item.id.isEmpty || int.tryParse(item.id) == null || int.tryParse(item.id)! <= 0) && (item.source != 'shop'));
     _isAddingNewItem = _newItemIndex != -1;
   }
 
@@ -48,21 +48,137 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
     // Map items to their categories robustly
     int? topId, bottomId, shoesId;
     String? missingCategory;
+
+    // Check if any required category is missing from _outfitItems
+    bool hasTop = _outfitItems.any((item) {
+      final subcat = item.subcategory.toLowerCase();
+      final cat = item.category.toLowerCase();
+      return (subcat.contains('top') || cat.contains('top') ||
+              subcat.contains('shirt') || cat.contains('shirt') ||
+              subcat.contains('jacket') || cat.contains('jacket') ||
+              subcat.contains('sweater') || cat.contains('sweater') ||
+              subcat.contains('tshirt') || cat.contains('tshirt') ||
+              subcat.contains('upper body') || cat.contains('upper body'));
+    });
+    bool hasBottom = _outfitItems.any((item) {
+      final subcat = item.subcategory.toLowerCase();
+      final cat = item.category.toLowerCase();
+      return (subcat.contains('bottom') || cat.contains('bottom') ||
+              subcat.contains('jean') || cat.contains('jean') ||
+              subcat.contains('pant') || cat.contains('pant') ||
+              subcat.contains('trouser') || cat.contains('trouser') ||
+              subcat.contains('short') || cat.contains('short') ||
+              subcat.contains('skirt') || cat.contains('skirt') ||
+              subcat.contains('lower body') || cat.contains('lower body'));
+    });
+    bool hasShoes = _outfitItems.any((item) {
+      final subcat = item.subcategory.toLowerCase();
+      final cat = item.category.toLowerCase();
+      return (subcat.contains('shoe') || cat.contains('shoe') ||
+              subcat.contains('sneaker') || cat.contains('sneaker') ||
+              subcat.contains('boot') || cat.contains('boot') ||
+              subcat.contains('sandal') || cat.contains('sandal') ||
+              subcat.contains('loafer') || cat.contains('loafer') ||
+              subcat.contains('flat') || cat.contains('flat') ||
+              subcat.contains('heel') || cat.contains('heel'));
+    });
+
+    if (!hasTop) missingCategory = 'top';
+    else if (!hasBottom) missingCategory = 'bottom';
+    else if (!hasShoes) missingCategory = 'shoes';
+
+    if (missingCategory != null) {
+      // Add a placeholder for the missing category and show the dialog
+      final placeholder = ShopItem(
+        id: "",
+        name: "",
+        description: "",
+        category: missingCategory,
+        userName: "",
+        price: "",
+        imageUrl: widget.processedImageUrl ?? '',
+        color: "",
+        size: "",
+        occasion: "",
+        gender: "",
+        subcategory: "",
+        brand: "",
+        source: "closet",
+      );
+      setState(() {
+        _outfitItems.add(placeholder);
+      });
+      // Show the dialog for the new placeholder
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          contentPadding: EdgeInsets.zero,
+          content: SizedBox(
+            width: 400,
+            child: ItemDetailsForm(
+              initialItem: placeholder,
+              userId: widget.userId,
+              processedImageUrl: widget.processedImageUrl,
+              token: widget.token,
+              originalImagePath: widget.originalImagePath,
+              onItemAdded: (int newId, ShopItem completedItem) async {
+                setState(() {
+                  final idx = _outfitItems.indexWhere((item) => item.category.toLowerCase() == (missingCategory ?? ''));
+                  if (idx != -1) {
+                    _outfitItems[idx] = completedItem.copyWith(id: newId.toString());
+                  } else {
+                    _outfitItems.add(completedItem.copyWith(id: newId.toString()));
+                  }
+                });
+                Navigator.of(ctx).pop();
+                await _saveOutfitDirectly();
+              },
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Continue with the original logic for missing/invalid id
     for (final item in _outfitItems) {
       final subcat = item.subcategory.toLowerCase();
-      if ((subcat.contains('top') || subcat.contains('shirt') || subcat.contains('jacket') || subcat.contains('sweater') || subcat.contains('tshirt') || subcat.contains('upper body')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      final cat = item.category.toLowerCase();
+      if ((subcat.contains('top') || cat.contains('top') ||
+           subcat.contains('shirt') || cat.contains('shirt') ||
+           subcat.contains('jacket') || cat.contains('jacket') ||
+           subcat.contains('sweater') || cat.contains('sweater') ||
+           subcat.contains('tshirt') || cat.contains('tshirt') ||
+           subcat.contains('upper body') || cat.contains('upper body')) &&
+          int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         topId = int.tryParse(item.id);
-      } else if ((subcat.contains('bottom') || subcat.contains('jean') || subcat.contains('pant') || subcat.contains('trouser') || subcat.contains('short') || subcat.contains('skirt')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      } else if ((subcat.contains('bottom') || cat.contains('bottom') ||
+                  subcat.contains('jean') || cat.contains('jean') ||
+                  subcat.contains('pant') || cat.contains('pant') ||
+                  subcat.contains('trouser') || cat.contains('trouser') ||
+                  subcat.contains('short') || cat.contains('short') ||
+                  subcat.contains('skirt') || cat.contains('skirt') ||
+                  subcat.contains('lower body') || cat.contains('lower body')) &&
+                 int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         bottomId = int.tryParse(item.id);
-      } else if ((subcat.contains('shoe') || subcat.contains('sneaker') || subcat.contains('boot') || subcat.contains('sandal') || subcat.contains('loafer') || subcat.contains('flat') || subcat.contains('heel')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      } else if ((subcat.contains('shoe') || cat.contains('shoe') ||
+                  subcat.contains('sneaker') || cat.contains('sneaker') ||
+                  subcat.contains('boot') || cat.contains('boot') ||
+                  subcat.contains('sandal') || cat.contains('sandal') ||
+                  subcat.contains('loafer') || cat.contains('loafer') ||
+                  subcat.contains('flat') || cat.contains('flat') ||
+                  subcat.contains('heel') || cat.contains('heel')) &&
+                 int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         shoesId = int.tryParse(item.id);
       }
     }
     if (topId == null) missingCategory = 'top';
     else if (bottomId == null) missingCategory = 'bottom';
     else if (shoesId == null) missingCategory = 'shoes';
-    
-    if (topId == null || bottomId == null || shoesId == null) {
+    // Only show dialog if missing item is not from the shop
+    final missingIndex = _outfitItems.indexWhere((item) => (item.id.isEmpty || int.tryParse(item.id) == null || int.tryParse(item.id)! <= 0) && (item.source != 'shop'));
+    if ((topId == null || bottomId == null || shoesId == null) && missingIndex != -1) {
       // Create placeholder ShopItem for missing category and show dialog
       final placeholder = ShopItem(
         id: "",
@@ -94,7 +210,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
               token: widget.token,
               originalImagePath: widget.originalImagePath,
               onItemAdded: (int newId, ShopItem completedItem) async {
-      setState(() {
+                setState(() {
                   // Replace any existing item for this category
                   final idx = _outfitItems.indexWhere((item) => item.category.toLowerCase() == (missingCategory ?? ''));
                   if (idx != -1) {
@@ -104,7 +220,6 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
                   }
                 });
                 Navigator.of(ctx).pop(); // Close the dialog
-                
                 // Now directly save the outfit with the updated items
                 await _saveOutfitDirectly();
               },
@@ -114,7 +229,6 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
       );
       return;
     }
-    
     // All items are present, save the outfit
     await _saveOutfitDirectly();
   }
@@ -124,11 +238,32 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
     int? topId, bottomId, shoesId;
     for (final item in _outfitItems) {
       final subcat = item.subcategory.toLowerCase();
-      if ((subcat.contains('top') || subcat.contains('shirt') || subcat.contains('jacket') || subcat.contains('sweater') || subcat.contains('tshirt') || subcat.contains('upper body')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      final cat = item.category.toLowerCase();
+      if ((subcat.contains('top') || cat.contains('top') ||
+           subcat.contains('shirt') || cat.contains('shirt') ||
+           subcat.contains('jacket') || cat.contains('jacket') ||
+           subcat.contains('sweater') || cat.contains('sweater') ||
+           subcat.contains('tshirt') || cat.contains('tshirt') ||
+           subcat.contains('upper body') || cat.contains('upper body')) &&
+          int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         topId = int.tryParse(item.id);
-      } else if ((subcat.contains('bottom') || subcat.contains('jean') || subcat.contains('pant') || subcat.contains('trouser') || subcat.contains('short') || subcat.contains('skirt')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      } else if ((subcat.contains('bottom') || cat.contains('bottom') ||
+                  subcat.contains('jean') || cat.contains('jean') ||
+                  subcat.contains('pant') || cat.contains('pant') ||
+                  subcat.contains('trouser') || cat.contains('trouser') ||
+                  subcat.contains('short') || cat.contains('short') ||
+                  subcat.contains('skirt') || cat.contains('skirt') ||
+                  subcat.contains('lower body') || cat.contains('lower body')) &&
+                 int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         bottomId = int.tryParse(item.id);
-      } else if ((subcat.contains('shoe') || subcat.contains('sneaker') || subcat.contains('boot') || subcat.contains('sandal') || subcat.contains('loafer') || subcat.contains('flat') || subcat.contains('heel')) && int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
+      } else if ((subcat.contains('shoe') || cat.contains('shoe') ||
+                  subcat.contains('sneaker') || cat.contains('sneaker') ||
+                  subcat.contains('boot') || cat.contains('boot') ||
+                  subcat.contains('sandal') || cat.contains('sandal') ||
+                  subcat.contains('loafer') || cat.contains('loafer') ||
+                  subcat.contains('flat') || cat.contains('flat') ||
+                  subcat.contains('heel') || cat.contains('heel')) &&
+                 int.tryParse(item.id) != null && int.tryParse(item.id)! > 0) {
         shoesId = int.tryParse(item.id);
       }
     }
@@ -137,7 +272,12 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
       print('DEBUG: topId=$topId, bottomId=$bottomId, shoesId=$shoesId');
       print('DEBUG: _outfitItems=${_outfitItems.map((item) => 'id: \\${item.id}, cat: \\${item.category}, name: \\${item.name}').toList()}');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Missing required items for outfit.')),
+        SnackBar(
+          content: Text('Missing required items for outfit.', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -159,16 +299,34 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
       );
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Outfit saved successfully!')),
+          SnackBar(
+            content: Text('Outfit saved successfully!', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+        // Navigate back to the previous screen after a short delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save outfit.')),
+          SnackBar(
+            content: Text('Failed to save outfit.', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving outfit: $e')),
+        SnackBar(
+          content: Text('Error saving outfit: $e', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -293,8 +451,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
                       ),
                   ),
                 ),
-              ],
-            ),
+              ]),
             ),
           ),
         ],
@@ -305,21 +462,27 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
   Widget _buildOutfitItemCard(ShopItem item, String fontFamily, BuildContext context) {
     final isShop = item.source == 'shop';
     final isCloset = item.source == 'closet';
+    final isValidShopId = isShop && item.id.isNotEmpty && int.tryParse(item.id) != null && int.parse(item.id) > 0;
+    String buildImageUrl(String? url) {
+      if (url == null || url.isEmpty) return '';
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return 'http://10.0.2.2:8000/static/$url';
+    }
     return GestureDetector(
-      onTap: isShop
+      onTap: isValidShopId
           ? () async {
               final shopService = ShopService(token: null); // Pass token if needed
               final fullItem = await shopService.getShopItemById(item.id);
               if (fullItem != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
                     builder: (context) => ItemScreen(item: fullItem, userId: widget.userId),
-          ),
-        );
+                  ),
+                );
               }
             }
-          : null, // Disable tap for closet items
+          : null, // Disable tap for closet items or invalid shop items
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
@@ -339,11 +502,11 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: item.imageUrl != null
+              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      item.imageUrl!,
+                      buildImageUrl(item.imageUrl),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => 
                         const Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey),
@@ -457,6 +620,7 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
   String? _category;
   String? _subcategory;
   bool _isLoading = false;
+  bool _isClassifying = false;
 
   final List<String> _categories = ['Upper Body', 'Lower Body', 'Dress', 'Bags', 'Shoes'];
   final Map<String, List<String>> _subcategories = {
@@ -537,6 +701,49 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
     }
   }
 
+  Future<void> _classifyItem() async {
+    final imagePath = widget.originalImagePath ?? widget.processedImageUrl;
+    if (imagePath == null || imagePath.isEmpty) return;
+    setState(() { _isClassifying = true; });
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/ai/classify-image');
+      final request = http.MultipartRequest('POST', url);
+      if (widget.token != null) {
+        request.headers.addAll({'Authorization': 'Bearer ${widget.token}'});
+      }
+      request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+      final response = await request.send();
+      final responseString = await response.stream.bytesToString();
+      if (response.statusCode == 200) {
+        var data = jsonDecode(responseString);
+        setState(() {
+          _category = data['category'];
+          // Validate subcategory exists in predefined list
+          final returnedSubcategory = data['subcategory'];
+          final availableSubcategories = _subcategories[_category] ?? [];
+          if (availableSubcategories.contains(returnedSubcategory)) {
+            _subcategory = returnedSubcategory;
+          } else {
+            _subcategory = null;
+          }
+          final occasion = data['occasion'];
+          if (_occasionOptions.contains(occasion)) {
+            _occasion = occasion;
+          } else {
+            _occasion = null;
+          }
+          _occasionController.text = _occasion ?? '';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() { _isClassifying = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const String fontFamily = 'Archivo';
@@ -547,9 +754,8 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Enter Item Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamily), textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            if (widget.processedImageUrl != null && widget.processedImageUrl!.isNotEmpty) ...[
+            if ((widget.processedImageUrl != null && widget.processedImageUrl!.isNotEmpty) || (widget.originalImagePath != null && widget.originalImagePath!.isNotEmpty)) ...[
+              // Show the image container first
               Container(
                 height: 200,
                 width: double.infinity,
@@ -559,22 +765,45 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: widget.processedImageUrl!.startsWith('http')
+                  child: (widget.processedImageUrl != null && widget.processedImageUrl!.isNotEmpty && widget.processedImageUrl!.startsWith('http'))
                     ? Image.network(
                         widget.processedImageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
                             const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
                       )
-                    : Image.file(
-                        File(widget.processedImageUrl!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
-                      ),
+                    : (widget.processedImageUrl != null && widget.processedImageUrl!.isNotEmpty)
+                      ? Image.file(
+                          File(widget.processedImageUrl!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+                        )
+                      : (widget.originalImagePath != null && widget.originalImagePath!.isNotEmpty)
+                        ? Image.file(
+                            File(widget.originalImagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+                          )
+                        : const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 10),
+              // Autofill button below the image
+              ElevatedButton.icon(
+                onPressed: _isClassifying ? null : _classifyItem,
+                icon: _isClassifying ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.auto_fix_high, color: Colors.white),
+                label: Text(_isClassifying ? 'Autofilling...' : 'Autofill with AI', style: const TextStyle(fontFamily: fontFamily)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD55F5F),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 8), // More compact
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
             DropdownButtonFormField<String>(
               value: _category,

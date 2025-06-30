@@ -31,10 +31,12 @@ class Outfit {
 class MyOutfitsPage extends StatefulWidget {
   final String? initialFilter; // Category passed from ClosetPage
   final String token; // Add token parameter for user authentication
+  final String? initialOutfitId; // Outfit to scroll to or open
 
   const MyOutfitsPage({
     this.initialFilter, 
     required this.token, // Make token required
+    this.initialOutfitId,
     super.key
   });
 
@@ -87,6 +89,19 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
 
       // Apply initial filter
       _filterOutfits();
+
+      // If initialOutfitId is provided, scroll to or open its detail
+      if (widget.initialOutfitId != null) {
+        final idx = _filteredOutfits.indexWhere((o) => o.id == widget.initialOutfitId);
+        if (idx != -1) {
+          // Option 1: Scroll to the outfit in the list (if using a scrollable list)
+          // Option 2: Open the detail dialog for the outfit
+          // We'll open the detail dialog for a consistent experience
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showOutfitDetailDialog(context, _filteredOutfits[idx]);
+          });
+        }
+      }
     } catch (e) {
       print('Error loading outfits: $e');
       setState(() {
@@ -156,33 +171,74 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
   }
 
   void _deleteOutfit(String outfitId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFDF9F7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Delete Outfit', style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black)),
+        content: const Text('Are you sure you want to delete this outfit?', style: TextStyle(fontFamily: 'Archivo', fontSize: 16, color: Colors.black)),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+              textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+            ),
+            child: const Text('Yes'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.black,
+              backgroundColor: Color(0xFFF3F3F3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+              textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+            ),
+            child: const Text('No'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
-      // Use OutfitService to delete the outfit
       final outfitService = OutfitService(token: widget.token);
-      final success = await outfitService.deleteOutfit(outfitId);
-      
+      final (success, errorMsg) = await outfitService.deleteOutfit(outfitId);
       if (success) {
         setState(() {
           final index = _allOutfits.indexWhere((o) => o.id == outfitId);
           if (index != -1) {
             _allOutfits.removeAt(index);
           }
-          
           final filteredIndex = _filteredOutfits.indexWhere((o) => o.id == outfitId);
           if (filteredIndex != -1) {
             _filteredOutfits.removeAt(filteredIndex);
           }
         });
-        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Outfit removed successfully'))
+            SnackBar(
+              content: Text('Outfit removed successfully', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to remove outfit'))
+            SnackBar(
+              content: Text(errorMsg ?? 'Failed to remove outfit', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(0xFFD55F5F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }
@@ -190,7 +246,12 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
       print("Error deleting outfit $outfitId: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error removing outfit'))
+          SnackBar(
+            content: Text('Error removing outfit', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -379,6 +440,13 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
               child: Row(
                 children: _filterCategories.map((category) {
                   bool isSelected = category == selectedFilter;
+                  Color chipColor = category == "All"
+                      ? const Color(0xFFD55F5F)
+                      : _getCategoryColor(category);
+                  Color textColor = isSelected ? Colors.white : Colors.black;
+                  if (category != "All" && isSelected && chipColor.computeLuminance() > 0.7) {
+                    textColor = Colors.black;
+                  }
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ChoiceChip(
@@ -390,8 +458,9 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                           _filterOutfits();
                         }
                       },
-                      labelStyle: TextStyle(fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, color: isSelected ? Colors.white : Colors.black, letterSpacing: -0.02 * 17),
-                      selectedColor: Colors.black, backgroundColor: Colors.grey[200],
+                      labelStyle: TextStyle(fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, color: textColor, letterSpacing: -0.02 * 17),
+                      selectedColor: chipColor,
+                      backgroundColor: chipColor.withOpacity(0.18),
                       shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), showCheckmark: false, elevation: isSelected ? 2 : 0,
                     ),
                   );
@@ -449,6 +518,10 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                       _buildTagChip(outfit.tags[0], fontFamily),
                     const Spacer(),
                     IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.black54, size: 20),
+                      onPressed: () => _showCategoryEditDialog(context, outfit, fontFamily),
+                    ),
+                    IconButton(
                       icon: Icon(outfit.isFavorite ? Icons.favorite : Icons.favorite_border, color: outfit.isFavorite ? Colors.red : Colors.black.withOpacity(0.7)),
                       onPressed: onFavoriteTap,
                     ),
@@ -499,20 +572,37 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
   }
 
   Widget _buildTagChip(String tag, String fontFamily) {
-    Color bgColor;
-    switch (tag.toLowerCase()) {
-      case 'everyday': bgColor = const Color(0xFFD6E4BA); break;
-      case 'work': bgColor = Colors.blueGrey.shade100; break;
-      case 'workout': bgColor = Colors.orange.shade100; break;
-      case 'party': bgColor = Colors.pink.shade100; break;
-      case 'weekend': bgColor = Colors.purple.shade100; break;
-      default: bgColor = Colors.grey.shade300;
+    Color bgColor = _getCategoryColor(tag);
+    Color textColor = Colors.white;
+    
+    // For lighter background colors, use dark text
+    if (tag.toLowerCase() == 'everyday') {
+      textColor = Colors.black87;
     }
-    // TODO: Add icon logic if needed (CSS shows image 51 for Everyday tag)
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-      decoration: BoxDecoration( color: bgColor, borderRadius: BorderRadius.circular(20.0)),
-      child: Text( tag, style: TextStyle( fontFamily: fontFamily, fontSize: 17, fontWeight: FontWeight.w400, letterSpacing: -0.02 * 17, color: Colors.black)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20.0),
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        tag,
+        style: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          letterSpacing: -0.02 * 14,
+          color: textColor,
+        ),
+      ),
     );
   }
 
@@ -711,6 +801,19 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                 ],
               ),
               const SizedBox(height: 18),
+              Row(
+                children: [
+                  Text("Categories:", style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w600, fontSize: 16)),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showCategoryEditDialog(context, outfit, fontFamily);
+                    },
+                  ),
+                ],
+              ),
               if (outfit.tags.isNotEmpty)
                 Wrap(
                   spacing: 8.0,
@@ -732,7 +835,6 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                     icon: const Icon(Icons.delete, color: Colors.black54),
                     onPressed: () {
                       _deleteOutfit(outfit.id);
-                      Navigator.of(context).pop();
                     },
                   ),
                 ],
@@ -742,6 +844,171 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
         );
       },
     );
+  }
+
+  void _showCategoryEditDialog(BuildContext context, Outfit outfit, String fontFamily) {
+    final List<String> availableCategories = ["Work", "Workout", "Everyday", "Party", "Weekend"];
+    List<String> selectedCategories = List.from(outfit.tags);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                "Edit Categories",
+                style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Select categories for this outfit:",
+                    style: TextStyle(fontFamily: fontFamily, fontSize: 16, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: availableCategories.map((category) {
+                      bool isSelected = selectedCategories.contains(category);
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              selectedCategories.remove(category);
+                            } else {
+                              selectedCategories.add(category);
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          decoration: BoxDecoration(
+                            color: isSelected ? _getCategorySelectionColor(category) : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(20.0),
+                            border: isSelected ? Border.all(color: _getCategorySelectionColor(category), width: 2) : null,
+                          ),
+                          child: Text(
+                            category,
+                            style: TextStyle(
+                              fontFamily: fontFamily,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(fontFamily: fontFamily, color: Colors.grey.shade600),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _updateOutfitCategories(outfit.id, selectedCategories);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD55F5F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(
+                    "Save",
+                    style: TextStyle(fontFamily: fontFamily, color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _updateOutfitCategories(String outfitId, List<String> newTags) async {
+    try {
+      final outfitService = OutfitService(token: widget.token);
+      final updatedOutfit = await outfitService.updateOutfit(
+        outfitId: outfitId,
+        tags: newTags,
+      );
+      
+      if (updatedOutfit != null) {
+        setState(() {
+          // Update the outfit in both lists
+          final allIndex = _allOutfits.indexWhere((o) => o.id == outfitId);
+          if (allIndex != -1) {
+            _allOutfits[allIndex].tags.clear();
+            _allOutfits[allIndex].tags.addAll(newTags);
+          }
+          
+          final filteredIndex = _filteredOutfits.indexWhere((o) => o.id == outfitId);
+          if (filteredIndex != -1) {
+            _filteredOutfits[filteredIndex].tags.clear();
+            _filteredOutfits[filteredIndex].tags.addAll(newTags);
+          }
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Categories updated successfully'))
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to update categories'))
+          );
+        }
+      }
+    } catch (e) {
+      print("Error updating outfit categories: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error updating categories'))
+        );
+      }
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'everyday': return const Color(0xFFD6E4BA);
+      case 'work': return Colors.blueGrey.shade200;
+      case 'workout': return Colors.orange.shade200;
+      case 'party': return Colors.pink.shade200;
+      case 'weekend': return Colors.purple.shade200;
+      default: return Colors.grey.shade300;
+    }
+  }
+
+  Color _getCategorySelectionColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'everyday': return const Color(0xFFD6E4BA);
+      case 'work': return Colors.blueGrey.shade600;
+      case 'workout': return Colors.orange.shade600;
+      case 'party': return Colors.pink.shade600;
+      case 'weekend': return Colors.purple.shade600;
+      default: return Colors.grey.shade600;
+    }
+  }
+
+  void _showOutfitDetailDialog(BuildContext context, Outfit outfit) {
+    final String fontFamily = 'Archivo';
+    _showOutfitDetailModal(context, outfit, fontFamily);
   }
 
 } // End of _MyOutfitsPageState

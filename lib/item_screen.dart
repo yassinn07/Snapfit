@@ -7,6 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'services/ml_outfit_service.dart'; // Import ML outfit service
 import 'services/profile_service.dart'; // Import ProfileService for favorite management
 import 'package:shared_preferences/shared_preferences.dart'; // For userId
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'outfit_generation_screen.dart';
 
 // Placeholder for related item data model (can be the same as ShopItem)
 // TODO: Replace with your actual data structure if different
@@ -58,7 +61,12 @@ class _ItemScreenState extends State<ItemScreen> {
   void _toggleFavorite() async {
     if (widget.token == null || widget.token!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to favorite items.')),
+        SnackBar(
+          content: Text('You must be logged in to favorite items.', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -77,7 +85,12 @@ class _ItemScreenState extends State<ItemScreen> {
           widget.item.isFavorite = !newFavoriteState;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update favorite status')),
+          SnackBar(
+            content: Text('Failed to update favorite status', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       } else {
         // Notify parent/shop screen if callback is provided
@@ -91,7 +104,12 @@ class _ItemScreenState extends State<ItemScreen> {
         widget.item.isFavorite = !newFavoriteState;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error updating favorite status')),
+        SnackBar(
+          content: Text('Error updating favorite status', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -100,14 +118,13 @@ class _ItemScreenState extends State<ItemScreen> {
     setState(() {
       _isGeneratingOutfits = true;
     });
-    final mlService = MLOutfitService(token: null); // Use token if needed
     try {
-      final outfits = await mlService.generateOutfitsForItem(widget.item);
+      // Step 1: Send the item's image to the backend for recommendation
+      final recommendations = await _recommendOutfitFromShopItem(widget.item);
       setState(() {
-        _generatedOutfits = outfits;
         _isGeneratingOutfits = false;
       });
-      if (outfits.isEmpty) {
+      if (recommendations == null) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -121,46 +138,93 @@ class _ItemScreenState extends State<ItemScreen> {
             ],
           ),
         );
-      } else {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (context) => Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Generated Outfits', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 220,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: outfits.length,
-                    separatorBuilder: (context, index) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      final outfit = outfits[index];
-                      return _buildRelatedItemCard(context, outfit, 'Archivo');
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return;
       }
+      // Step 2: Build ShopItem list for OutfitGenerationScreen
+      final List<ShopItem> outfitItems = [];
+      // Add the original item first, ensuring source is 'shop' and imageUrl is preserved
+      outfitItems.add(widget.item.copyWith(source: 'shop', imageUrl: widget.item.imageUrl));
+      // Helper to check if two items are the same category
+      bool isSameCategory(ShopItem a, dynamic b) {
+        final aCat = a.category.toLowerCase();
+        final bCat = (b['category'] ?? '').toString().toLowerCase();
+        return aCat == bCat;
+      }
+      for (var cat in ['top', 'bottom', 'shoes']) {
+        final catRecs = recommendations[cat];
+        final item = (catRecs?['closet'] ?? catRecs?['shop']);
+        if (item != null) {
+          // Only add if it's not the same category as the original item
+          if (!isSameCategory(widget.item, item)) {
+            outfitItems.add(ShopItem(
+              id: item['id'].toString(),
+              name: (item['name'] != null && (item['brand'] ?? '').toString().isNotEmpty)
+                ? '${item['name']} | ${item['brand']}'
+                : (item['name'] ?? (item['subcategory'] ?? '')),
+              description: '',
+              category: item['category'] ?? '',
+              userName: item['brand'] ?? '',
+              price: item['price']?.toString() ?? '',
+              imageUrl: item['path'],
+              color: item['color'] ?? '',
+              size: item['size'] ?? '',
+              occasion: item['occasion'] ?? '',
+              gender: item['gender'] ?? '',
+              subcategory: item['subcategory'] ?? '',
+              brand: item['brand'] ?? '',
+              source: item['source'] ?? 'shop',
+            ));
+          }
+        }
+      }
+      // Step 3: Navigate to OutfitGenerationScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OutfitGenerationScreen(
+            outfitItems: outfitItems,
+            userId: widget.userId,
+            processedImageUrl: widget.item.imageUrl,
+            token: widget.token,
+            originalImagePath: widget.item.imageUrl,
+          ),
+        ),
+      );
     } catch (e) {
       setState(() {
         _isGeneratingOutfits = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating outfits: $e')),
+        SnackBar(
+          content: Text('Error generating outfits: $e', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
+  }
+
+  // Helper to call backend AI stylist for shop item
+  Future<Map<String, dynamic>?> _recommendOutfitFromShopItem(ShopItem item) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8000/ai/recommend-outfit-by-item-id'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': widget.userId,
+          'item_id': int.parse(item.id),
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // data['recommendations'] is expected to be a map with 'top', 'bottom', 'shoes'
+        return data['recommendations'] as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      // Handle error
+    }
+    return null;
   }
 
   void _visitStore() async {
@@ -180,12 +244,22 @@ class _ItemScreenState extends State<ItemScreen> {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open store URL: ${widget.item.purchaseLink}')),
+          SnackBar(
+            content: Text('Could not open store URL: ${widget.item.purchaseLink}', style: TextStyle(color: Colors.white)),
+            backgroundColor: Color(0xFFD55F5F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No store link available for this item')),
+        SnackBar(
+          content: Text('No store link available for this item', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFFD55F5F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -597,7 +671,7 @@ class _ItemScreenState extends State<ItemScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: item.imageUrl != null
-                          ? Image.network(item.imageUrl!, fit: BoxFit.cover,
+                          ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => 
                               const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
                           : const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)),
