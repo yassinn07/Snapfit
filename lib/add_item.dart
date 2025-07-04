@@ -8,6 +8,7 @@ import 'services/closet_service.dart'; // Import closet service
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'services/profile_service.dart'; // Import profile service
+import 'constants.dart' show showThemedSnackBar;
 
 class AddItemPage extends StatefulWidget {
   final String token;
@@ -167,7 +168,7 @@ class _AddItemPageState extends State<AddItemPage> {
       );
 
       if (newItem != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item added successfully!')));
+        showThemedSnackBar(context, 'Item added successfully!', type: 'success');
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
@@ -313,7 +314,7 @@ class _AddItemPageState extends State<AddItemPage> {
               )
                   : ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.file(_imageFile!, fit: BoxFit.cover, width: double.infinity, height: 500),
+                child: Image.file(_imageFile!, fit: BoxFit.contain, width: double.infinity, height: 500),
               ),
             ),
             const SizedBox(height: 24),
@@ -385,27 +386,33 @@ class _AddItemPageState extends State<AddItemPage> {
                 ),
                 const SizedBox(height: 16),
               ],
-              ElevatedButton(
-                onPressed: _isLoading || _isClassifying ? null : () async {
-                  // 1. Upload image and get item ID
-                  final uploadSuccess = await _uploadImageFirst();
-                  if (uploadSuccess) {
-                    // 2. Classify the item using AI
-                    await _classifyItem();
-                    // 3. Move to details form
-                    setState(() => _step = 1);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: mainRed,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                  minimumSize: const Size(180, 48),
+              SafeArea(
+                left: true,
+                right: true,
+                top: false,
+                bottom: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading || _isClassifying ? null : () async {
+                      // 1. Upload image and get item ID
+                      final uploadSuccess = await _uploadImageFirst();
+                      if (uploadSuccess) {
+                        setState(() => _step = 1);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainRed,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      minimumSize: const Size.fromHeight(0),
+                    ),
+                    child: _isLoading || _isClassifying
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
+                  ),
                 ),
-                child: _isLoading || _isClassifying
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Continue', style: TextStyle(fontFamily: fontFamily, fontSize: 18)),
               ),
             ],
           ],
@@ -434,6 +441,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   const SizedBox(height: 20),
 
                   // Masked Image Preview Container
+                  const Divider(height: 32, thickness: 1.2),
                   if (_maskedImageUrl != null) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -472,7 +480,7 @@ class _AddItemPageState extends State<AddItemPage> {
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 'http://10.0.2.2:8000$_maskedImageUrl',
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                                 loadingBuilder: (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
                                   return Center(
@@ -510,7 +518,26 @@ class _AddItemPageState extends State<AddItemPage> {
                     const SizedBox(height: 20),
                   ],
 
-                  const Divider(height: 32, thickness: 1.2),
+                  // Autofill button goes here, above the Category dropdown
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isClassifying ? null : () async {
+                        await _classifyItem();
+                      },
+                      icon: Icon(Icons.auto_fix_high, color: Colors.white),
+                      label: Text('Autofill', style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16, fontFamily: fontFamily),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   // Category Dropdown (auto-filled based on classification)
                   DropdownButtonFormField<String>(
@@ -663,7 +690,7 @@ class _AddItemPageState extends State<AddItemPage> {
                     dropdownColor: Colors.white,
                     iconEnabledColor: mainRed,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(

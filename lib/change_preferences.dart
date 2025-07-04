@@ -51,7 +51,7 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
   final List<String> _lifestyleOptions = ["Work", "Workout", "Everyday", "Party", "Formal", "Casual"];
   final List<String> _seasonOptions = ["Auto", "Spring", "Summer", "Autumn", "Winter"];
   final List<String> _colorOptions = ["Red", "Green", "Blue", "Yellow", "Black", "White", "Gray", "Brown", "Pink", "Purple", "Orange"];
-  final List<String> _categoryExclusionOptions = ["Dresses", "Skirts", "Jackets", "Tops", "Pants", "Shoes", "Bags", "Accessories"];
+  final List<String> _categoryExclusionOptions = ["Dresses", "Skirts", "Jackets", "Tops", "Pants", "Shoes", "Bags"];
 
 
   @override
@@ -246,12 +246,12 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
                                 tempSelection.clear();
                               });
                             },
-                            child: const Text("Clear All", 
-                              style: TextStyle(
-                                color: Colors.red, 
-                                fontFamily: 'Archivo',
-                                fontWeight: FontWeight.bold,
-                              )
+                            child: const Text("Clear All",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontFamily: 'Archivo',
+                                  fontWeight: FontWeight.bold,
+                                )
                             ),
                           ),
                           ElevatedButton(
@@ -346,10 +346,10 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error saving preferences'))
+            const SnackBar(content: Text('Error saving preferences'))
         );
       }
     }
@@ -375,49 +375,49 @@ class _ChangePreferencesPageState extends State<ChangePreferencesPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 19.0, vertical: 20.0),
-            child: Column(
-              children: [
-                _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: 'Archivo'),
-                const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: 'Archivo'),
-                const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: 'Archivo'),
-                const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: 'Archivo'),
-                const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: 'Archivo'),
-                const SizedBox(height: 15),
-                _buildPreferenceEditRow(title: "Exclusions", currentValue: _selectedExclusions.isEmpty ? "Select excluded categories" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: 'Archivo'),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _savePreferences,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD55F5F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                    ),
-                    child: const Text(
-                      "Save Preferences",
-                      style: TextStyle(
-                        fontFamily: 'Archivo',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 19.0, vertical: 20.0),
+        child: Column(
+          children: [
+            _buildPreferenceEditRow(title: "Fit", currentValue: _selectedFit, onTap: () => _showSingleChoiceOptions(context, PreferenceType.fit), fontFamily: 'Archivo'),
+            const SizedBox(height: 15),
+            _buildPreferenceEditRow(title: "Age group", currentValue: _selectedAgeGroup, onTap: () => _showSingleChoiceOptions(context, PreferenceType.ageGroup), fontFamily: 'Archivo'),
+            const SizedBox(height: 15),
+            _buildPreferenceEditRow(title: "Life Style", currentValue: _selectedLifestyle.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.lifestyle), fontFamily: 'Archivo'),
+            const SizedBox(height: 15),
+            _buildPreferenceEditRow(title: "Season", currentValue: _selectedSeason, onTap: () => _showSingleChoiceOptions(context, PreferenceType.season), fontFamily: 'Archivo'),
+            const SizedBox(height: 15),
+            _buildPreferenceEditRow(title: "Colors", currentValue: _selectedColors.isEmpty ? "Select preferred colors" : _selectedColors.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.colors), fontFamily: 'Archivo'),
+            const SizedBox(height: 15),
+            _buildPreferenceEditRow(title: "Exclusions", currentValue: _selectedExclusions.isEmpty ? "Select excluded categories" : _selectedExclusions.join(', '), onTap: () => _showMultiChoiceOptions(context, PreferenceType.exclusions), fontFamily: 'Archivo'),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _savePreferences,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD55F5F),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
+                child: const Text(
+                  "Save Preferences",
+                  style: TextStyle(
+                    fontFamily: 'Archivo',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
     );
   }
 

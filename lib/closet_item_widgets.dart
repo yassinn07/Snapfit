@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/closet_service.dart';
+import 'config.dart';
+import '3d_model_viewer.dart';
 
 // Helper method to build the closet items list
 Widget buildClosetItemsRow({
@@ -66,26 +68,26 @@ Widget buildClosetItemsRow({
     );
   }
   return SizedBox(
-    height: 201,
-    child: ListView.builder(
-      scrollDirection: Axis.horizontal,
-      itemCount: items.length, // Remove +1 for Add Item card
-      padding: EdgeInsets.zero,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Padding(
-          padding: const EdgeInsets.only(right: 12.0),
-          child: buildClosetItemCard(
-            context: context,
-            item: item,
-            fontFamily: fontFamily,
-            onTap: () => onTap(item),
-            onEditTap: () => onEdit(item),
-            onDeleteTap: () => onDelete(item)
-          )
-        );
-      }
-    )
+      height: 201,
+      child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length, // Remove +1 for Add Item card
+          padding: EdgeInsets.zero,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: buildClosetItemCard(
+                    context: context,
+                    item: item,
+                    fontFamily: fontFamily,
+                    onTap: () => onTap(item),
+                    onEditTap: () => onEdit(item),
+                    onDeleteTap: () => onDelete(item)
+                )
+            );
+          }
+      )
   );
 }
 
@@ -103,65 +105,68 @@ class ClosetItemDetailsDialog extends StatelessWidget {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       elevation: 8,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Image with rounded top corners
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                ? Image.network(
-                    item.imageUrl!.startsWith('http')
-                        ? item.imageUrl!
-                        : 'http://10.0.2.2:8000/static/${normalizeImagePath(item.imageUrl!)}',
-                    width: double.infinity,
-                    height: 220,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    height: 220,
-                    width: double.infinity,
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.checkroom, size: 80, color: Colors.grey),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: fontFamily,
-                    color: const Color(0xFFD55F5F),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 24, thickness: 1.2),
-                _buildDetailRow("Subcategory", item.subcategory),
-                _buildDetailRow("Color", item.color),
-                _buildDetailRow("Size", item.size),
-                _buildDetailRow("Occasion", item.occasion),
-              ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Image with rounded top corners, show full image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                  ? Image.network(
+                item.imageUrl!.startsWith('http')
+                    ? item.imageUrl!
+                    : '${Config.baseUrl}/static/${normalizeImagePath(item.imageUrl!)}',
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+              )
+                  : Container(
+                height: 300,
+                width: double.infinity,
+                color: Colors.grey[200],
+                child: const Icon(Icons.checkroom, size: 80, color: Colors.grey),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: const Color(0xFFD55F5F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: fontFamily,
+                      color: const Color(0xFFD55F5F),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 24, thickness: 1.2),
+                  _buildDetailRow("Subcategory", item.subcategory),
+                  _buildDetailRow("Color", item.color),
+                  _buildDetailRow("Size", item.size),
+                  _buildDetailRow("Occasion", item.occasion),
+                ],
+              ),
             ),
-            child: const Text("Close"),
-          ),
-          const SizedBox(height: 16),
-        ],
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: const Color(0xFFD55F5F),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold),
+              ),
+              child: const Text("Close"),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -200,44 +205,44 @@ Widget buildClosetItemCard({
       width: 143,
       height: 201,
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F3),
-        borderRadius: BorderRadius.circular(10)
+          color: const Color(0xFFF3F3F3),
+          borderRadius: BorderRadius.circular(10)
       ),
       child: Stack(
         children: [
           // Item image or placeholder
           Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                ? Image.network(
-                    item.imageUrl!.startsWith('http')
-                      ? item.imageUrl!
-                      : 'http://10.0.2.2:8000/static/${normalizeImagePath(item.imageUrl!)}',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.checkroom, size: 60, color: Colors.grey),
-                            const SizedBox(height: 8),
-                            Text(
-                              item.color,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: fontFamily,
-                                fontSize: 12,
-                                color: Colors.grey
+              child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                      ? Image.network(
+                      item.imageUrl!.startsWith('http')
+                          ? item.imageUrl!
+                          : '${Config.baseUrl}/static/${normalizeImagePath(item.imageUrl!)}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.checkroom, size: 60, color: Colors.grey),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.color,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontFamily: fontFamily,
+                                    fontSize: 12,
+                                    color: Colors.grey
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    )
+                      )
                   )
-                : Container(
+                      : Container(
                     color: Colors.grey[200],
                     child: Center(
                       child: Column(
@@ -249,17 +254,53 @@ Widget buildClosetItemCard({
                             item.color,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontFamily: fontFamily,
-                              fontSize: 12,
-                              color: Colors.grey
+                                fontFamily: fontFamily,
+                                fontSize: 12,
+                                color: Colors.grey
                             ),
                           ),
                         ],
                       ),
                     ),
                   )
-            )
+              )
           ),
+          // 3D Model Button (Top-Right) - Only show if path3d is a valid .glb file
+          if (item.path3d != null && item.path3d!.isNotEmpty && item.path3d!.toLowerCase().endsWith('.glb'))
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.white,
+                shape: const CircleBorder(),
+                elevation: 1.0,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Model3DViewer(
+                        modelPath: item.path3d!,
+                        itemName: item.name,
+                        fontFamily: fontFamily,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 33,
+                    height: 33,
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
+                    child: const Center(
+                      child: Icon(
+                        Icons.view_in_ar,
+                        size: 20,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           // Name overlay at the bottom
           Positioned(
             left: 0,
@@ -347,48 +388,48 @@ Widget buildAddItemCard({
   required VoidCallback onTap
 }) {
   return InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(10),
-    child: Container(
-      width: 128,
-      height: 201,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F1EE),
-        borderRadius: BorderRadius.circular(10)
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 43,
-            height: 43,
-            decoration: const BoxDecoration(
-              color: Color(0xFFD55F5F),
-              shape: BoxShape.circle
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 24
-              )
-            )
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+          width: 128,
+          height: 201,
+          decoration: BoxDecoration(
+              color: const Color(0xFFF6F1EE),
+              borderRadius: BorderRadius.circular(10)
           ),
-          const SizedBox(height: 15),
-          Text(
-            "New Item",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: fontFamily,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.02 * 14,
-              color: Colors.black
-            )
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                    width: 43,
+                    height: 43,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFFD55F5F),
+                        shape: BoxShape.circle
+                    ),
+                    child: const Center(
+                        child: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 24
+                        )
+                    )
+                ),
+                const SizedBox(height: 15),
+                Text(
+                    "New Item",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontFamily: fontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.02 * 14,
+                        color: Colors.black
+                    )
+                )
+              ]
           )
-        ]
       )
-    )
   );
 }
 
@@ -398,26 +439,26 @@ Widget buildItemCardOverlayButton({
   VoidCallback? onTap
 }) {
   return Material(
-    color: Colors.white,
-    shape: const CircleBorder(),
-    elevation: 1.0,
-    child: InkWell(
-      customBorder: const CircleBorder(),
-      onTap: onTap,
-      child: Container(
-        width: 33,
-        height: 33,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle
-        ),
-        child: Center(
-          child: Icon(
-            icon,
-            size: 17,
-            color: Colors.black.withOpacity(0.7)
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 1.0,
+      child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Container(
+              width: 33,
+              height: 33,
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle
+              ),
+              child: Center(
+                  child: Icon(
+                      icon,
+                      size: 17,
+                      color: Colors.black.withOpacity(0.7)
+                  )
+              )
           )
-        )
       )
-    )
   );
 } 

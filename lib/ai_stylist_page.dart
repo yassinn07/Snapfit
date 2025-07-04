@@ -35,7 +35,7 @@ class _AIStylistPageState extends State<AIStylistPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'query': message,
-          'user_id': widget.userId,
+          'user_id': widget.userId.toString(), // Ensure user_id is sent as a string
         }),
       );
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'filtered_shop_page.dart';
 import 'item_screen.dart';
 import 'services/profile_service.dart';
+import 'constants.dart' show showThemedSnackBar;
 
 class LikedItemsScreen extends StatefulWidget {
   final String? token;
@@ -57,22 +58,16 @@ class _LikedItemsScreenState extends State<LikedItemsScreen> {
           setState(() {
             _favorites.removeWhere((item) => item['item_id'].toString() == itemId);
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Item removed from favorites')),
-          );
+          showThemedSnackBar(context, 'Item removed from favorites', type: 'success');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to remove from favorites')),
-          );
+          showThemedSnackBar(context, 'Failed to remove from favorites', type: 'critical');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showThemedSnackBar(context, 'Error: $e', type: 'critical');
       }
     }
   }
@@ -215,14 +210,14 @@ class _LikedItemsScreenState extends State<LikedItemsScreen> {
                                             getFullImageUrl(item['image_url']),
                                             height: 160,
                                             width: double.infinity,
-                                            fit: BoxFit.cover,
+                                            fit: BoxFit.contain,
                                           )
                                         : (item['path'] != null && item['path'].toString().isNotEmpty
                                             ? Image.network(
                                                 getFullImageUrl(item['path']),
                                                 height: 160,
                                                 width: double.infinity,
-                                                fit: BoxFit.cover,
+                                                fit: BoxFit.contain,
                                               )
                                             : Container(
                                                 height: 160,
@@ -240,8 +235,44 @@ class _LikedItemsScreenState extends State<LikedItemsScreen> {
                                       elevation: 2,
                                       child: InkWell(
                                         customBorder: const CircleBorder(),
-                                        onTap: () {
-                                          _removeFavorite(fav['item_id'].toString());
+                                        onTap: () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              backgroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                                              title: const Text('Remove from Favorites', style: TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
+                                              content: const Text('Are you sure you want to remove this item from your favorites?', style: TextStyle(fontFamily: 'Archivo', fontSize: 16, color: Colors.black)),
+                                              actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(true),
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor: Colors.white,
+                                                    backgroundColor: Color(0xFFD55F5F),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                                                    textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+                                                  ),
+                                                  child: const Text('Yes'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(false),
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor: Colors.black,
+                                                    backgroundColor: const Color(0xFFF3F3F3),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                                                    textStyle: const TextStyle(fontFamily: 'Archivo', fontWeight: FontWeight.bold),
+                                                  ),
+                                                  child: const Text('No'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed == true) {
+                                            _removeFavorite(fav['item_id'].toString());
+                                          }
                                         },
                                         child: Padding(
                                           padding: const EdgeInsets.all(8.0),

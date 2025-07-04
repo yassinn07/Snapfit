@@ -5,7 +5,7 @@ import '../filtered_shop_page.dart'; // For ShopItem model
 
 class ShopService {
   final String? token;
-  
+
   ShopService({required this.token});
 
   // Get the token with a default empty string if null
@@ -21,31 +21,13 @@ class ShopService {
           'Authorization': 'Bearer $_authToken',
         },
       );
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> itemsData = json.decode(response.body);
         List<ShopItem> items = [];
 
         for (var itemData in itemsData) {
-          items.add(
-            ShopItem(
-              id: itemData['id'].toString(),
-              name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
-              description: itemData['description'] ?? '',
-              category: itemData['apparel_type'] ?? 'Unknown',
-              userName: itemData['user_name'] ?? 'Unknown',
-              price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
-              imageUrl: itemData['path'],
-              purchaseLink: itemData['purchase_link'],
-              // Important: all items start with isFavorite = false
-              // The favorites will be set in a separate call later
-              isFavorite: false,
-              color: itemData['color'] ?? '',
-              size: itemData['size'] ?? '',
-              occasion: itemData['occasion'] ?? '',
-              gender: itemData['gender'] ?? '',
-            )
-          );
+          items.add(ShopItem.fromJson(itemData));
         }
         return items;
       } else {
@@ -68,7 +50,7 @@ class ShopService {
         },
         body: json.encode({'item_id': itemId}),
       );
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> result = json.decode(response.body);
         return result['message'];
@@ -91,29 +73,13 @@ class ShopService {
           'Authorization': 'Bearer $_authToken',
         },
       );
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> itemsData = json.decode(response.body);
         List<ShopItem> items = [];
 
         for (var itemData in itemsData) {
-          items.add(
-            ShopItem(
-              id: itemData['id'].toString(),
-              name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
-              description: itemData['description'] ?? '',
-              category: itemData['apparel_type'] ?? 'Unknown',
-              userName: itemData['user_name'] ?? 'Unknown',
-              price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
-              imageUrl: itemData['path'],
-              purchaseLink: itemData['purchase_link'],
-              isFavorite: false,
-              color: itemData['color'] ?? '',
-              size: itemData['size'] ?? '',
-              occasion: itemData['occasion'] ?? '',
-              gender: itemData['gender'] ?? '',
-            )
-          );
+          items.add(ShopItem.fromJson(itemData));
         }
         return items;
       } else {
@@ -135,29 +101,13 @@ class ShopService {
           'Authorization': 'Bearer $_authToken',
         },
       );
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> itemsData = json.decode(response.body);
         List<ShopItem> items = [];
 
         for (var itemData in itemsData) {
-          items.add(
-            ShopItem(
-              id: itemData['id'].toString(),
-              name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
-              description: itemData['description'] ?? '',
-              category: itemData['apparel_type'] ?? 'Unknown',
-              userName: itemData['user_name'] ?? 'Unknown',
-              price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
-              imageUrl: itemData['path'],
-              purchaseLink: itemData['purchase_link'],
-              isFavorite: false,
-              color: itemData['color'] ?? '',
-              size: itemData['size'] ?? '',
-              occasion: itemData['occasion'] ?? '',
-              gender: itemData['gender'] ?? '',
-            )
-          );
+          items.add(ShopItem.fromJson(itemData));
         }
         return items;
       } else {
@@ -179,7 +129,7 @@ class ShopService {
           'Authorization': 'Bearer $_authToken',
         },
       );
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData.containsKey('clothes') && responseData['clothes'] != null) {
@@ -187,23 +137,7 @@ class ShopService {
           List<ShopItem> items = [];
 
           for (var itemData in itemsData) {
-            items.add(
-              ShopItem(
-                id: itemData['id'].toString(),
-                name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
-                description: itemData['description'] ?? '',
-                category: itemData['apparel_type'] ?? 'Unknown',
-                userName: itemData['user_name'] ?? 'Unknown',
-                price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
-                imageUrl: itemData['path'],
-                purchaseLink: itemData['purchase_link'],
-                isFavorite: false,
-                color: itemData['color'] ?? '',
-                size: itemData['size'] ?? '',
-                occasion: itemData['occasion'] ?? '',
-                gender: itemData['gender'] ?? '',
-              )
-            );
+            items.add(ShopItem.fromJson(itemData));
           }
           return items;
         } else {
@@ -230,24 +164,7 @@ class ShopService {
       );
       if (response.statusCode == 200) {
         final itemData = json.decode(response.body);
-        return ShopItem(
-          id: itemData['id'].toString(),
-          name: itemData['name'] ?? itemData['subtype'] ?? 'Item',
-          description: itemData['description'] ?? '',
-          category: itemData['apparel_type'] ?? 'Unknown',
-          userName: itemData['user_name'] ?? 'Unknown',
-          price: itemData['price'] != null ? '${itemData['price']} EGP' : 'Price unavailable',
-          imageUrl: itemData['path'],
-          purchaseLink: itemData['purchase_link'],
-          isFavorite: false,
-          color: itemData['color'] ?? '',
-          size: itemData['size'] ?? '',
-          occasion: itemData['occasion'] ?? '',
-          gender: itemData['gender'] ?? '',
-          subcategory: itemData['subcategory'] ?? '',
-          brand: itemData['brand'] ?? '',
-          source: 'shop',
-        );
+        return ShopItem.fromJson(itemData);
       }
     } catch (e) {
       print('Error fetching shop item by id: $e');

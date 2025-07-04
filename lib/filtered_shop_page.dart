@@ -18,8 +18,8 @@ class ShopItem {
   final String name;
   final String description;
   final String category; // apparel_type in database
-  final String userName;    
-  final String price;    
+  final String userName;
+  final String price;
   final String? imageUrl; // path in database
   bool isFavorite;
   final String? purchaseLink; // URL to purchase the item
@@ -30,6 +30,7 @@ class ShopItem {
   final String subcategory;
   final String brand;
   final String? source; // 'closet' or 'shop' for AI stylist recommendations
+  final String? path3d; // path_3d in database
 
   ShopItem({
     required this.id,
@@ -48,7 +49,30 @@ class ShopItem {
     this.subcategory = "",
     this.brand = "",
     this.source, // optional
+    this.path3d, // optional
   });
+
+  factory ShopItem.fromJson(Map<String, dynamic> json) {
+    return ShopItem(
+      id: json['id'].toString(),
+      name: json['subtype'] ?? json['apparel_type'] ?? json['name'] ?? '',
+      description: json['description'] ?? '',
+      category: json['apparel_type'] ?? json['category'] ?? '',
+      userName: json['brand'] ?? json['userName'] ?? json['user_name'] ?? '',
+      price: json['price']?.toString() ?? '',
+      imageUrl: json['path'] ?? json['imageUrl'],
+      isFavorite: json['isFavorite'] ?? false,
+      purchaseLink: json['purchase_link'] ?? json['purchaseLink'],
+      color: json['color'] ?? '',
+      size: json['size'] ?? '',
+      occasion: json['occasion'] ?? '',
+      gender: json['gender'] ?? '',
+      subcategory: json['subcategory'] ?? '',
+      brand: json['brand'] ?? '',
+      source: json['source'],
+      path3d: json['path_3d'],
+    );
+  }
 
   ShopItem copyWith({
     String? id,
@@ -67,6 +91,7 @@ class ShopItem {
     String? subcategory,
     String? brand,
     String? source,
+    String? path3d,
   }) {
     return ShopItem(
       id: id ?? this.id,
@@ -85,6 +110,7 @@ class ShopItem {
       subcategory: subcategory ?? this.subcategory,
       brand: brand ?? this.brand,
       source: source ?? this.source,
+      path3d: path3d ?? this.path3d,
     );
   }
 }
@@ -130,22 +156,22 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
 
   // Fetch all items from backend
   Future<void> _fetchItems() async {
-    setState(() { 
+    setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
       // Get items from the backend
       final items = await _shopService.getShopItems();
-      
+
       if (mounted) {
         setState(() {
           _allItems = items;
           _filterItems(); // Apply filters after getting items
           _isLoading = false;
         });
-        
+
         // Load liked status after getting items
         _loadLikedStatus();
       }
@@ -166,25 +192,25 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
     } else if (widget.filterType == FilterType.category && widget.filterTitle.toLowerCase() == 'clothing') {
       // Example: Combine multiple categories for "Clothing"
       _filteredItems = _allItems.where((item) =>
-          item.category.toLowerCase() == 'jacket' ||
+      item.category.toLowerCase() == 'jacket' ||
           item.category.toLowerCase() == 'top' ||
           item.category.toLowerCase() == 'dress' // Add other clothing types
       ).toList();
     }
     else if (widget.filterType == FilterType.category) {
       _filteredItems = _allItems.where((item) =>
-          item.category.toLowerCase() == widget.filterTitle.toLowerCase()
+      item.category.toLowerCase() == widget.filterTitle.toLowerCase()
       ).toList();
     } else { // FilterType.brand
       _filteredItems = _allItems.where((item) =>
-          item.userName.toLowerCase() == widget.filterTitle.toLowerCase()
+      item.userName.toLowerCase() == widget.filterTitle.toLowerCase()
       ).toList();
     }
 
     // After category/brand filtering, apply search filter if needed
     if (_searchQuery.isNotEmpty) {
       _filteredItems = _filteredItems.where((item) =>
-        item.name.toLowerCase().contains(_searchQuery.toLowerCase())
+          item.name.toLowerCase().contains(_searchQuery.toLowerCase())
       ).toList();
     }
   }
@@ -257,7 +283,7 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
   void _checkAiMatch(String itemId) async {
     try {
       final result = await _shopService.checkAiMatch(itemId);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result ?? 'AI Match check completed')),
       );
@@ -387,54 +413,54 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage.isNotEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _errorMessage,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, color: Colors.red[600], fontFamily: defaultFontFamily),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _fetchItems,
-                          child: const Text("Retry"),
-                        ),
-                      ],
-                    ),
-                  )
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _errorMessage,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.red[600], fontFamily: defaultFontFamily),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _fetchItems,
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            )
                 : _filteredItems.isEmpty
                 ? Center( // Message when no items match filter
-                    child: Text(
-                      "No items found for '${widget.filterTitle}'",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600], fontFamily: defaultFontFamily),
-                    ),
-                  )
+              child: Text(
+                "No items found for '${widget.filterTitle}'",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600], fontFamily: defaultFontFamily),
+              ),
+            )
                 : RefreshIndicator(
-                    onRefresh: _fetchItems,
-                    child: GridView.builder( // Display items in a grid
-                      padding: const EdgeInsets.all(16.0), // Padding around the grid
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, // 2 items per row
-                        crossAxisSpacing: 16.0, // Horizontal spacing
-                        mainAxisSpacing: 16.0, // Vertical spacing
-                        childAspectRatio: 0.55, // Adjust aspect ratio (width / height) for item card + text below
-                      ),
-                      itemCount: _filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _filteredItems[index];
-                        return _buildShopItemCard(
-                          context: context,
-                          item: item,
-                          fontFamily: defaultFontFamily,
-                          onFavoriteTap: () => _toggleFavorite(item.id),
-                          onAiTap: () => _checkAiMatch(item.id),
-                          onBagTap: () => _visitStore(item),
-                        );
-                      },
-                    ),
-                  ),
+              onRefresh: _fetchItems,
+              child: GridView.builder( // Display items in a grid
+                padding: const EdgeInsets.all(16.0), // Padding around the grid
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // 2 items per row
+                  crossAxisSpacing: 16.0, // Horizontal spacing
+                  mainAxisSpacing: 16.0, // Vertical spacing
+                  childAspectRatio: 0.55, // Adjust aspect ratio (width / height) for item card + text below
+                ),
+                itemCount: _filteredItems.length,
+                itemBuilder: (context, index) {
+                  final item = _filteredItems[index];
+                  return _buildShopItemCard(
+                    context: context,
+                    item: item,
+                    fontFamily: defaultFontFamily,
+                    onFavoriteTap: () => _toggleFavorite(item.id),
+                    onAiTap: () => _checkAiMatch(item.id),
+                    onBagTap: () => _visitStore(item),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -487,11 +513,11 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                       borderRadius: BorderRadius.circular(10),
                       child: item.imageUrl != null
                           ? Image.network(
-                              _buildImageUrl(item.imageUrl),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Center(child: Icon(Icons.image_not_supported_outlined, size: 50, color: Colors.grey)),
-                            )
+                        _buildImageUrl(item.imageUrl),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                        const Center(child: Icon(Icons.image_not_supported_outlined, size: 50, color: Colors.grey)),
+                      )
                           : const Center(child: Icon(Icons.image_not_supported_outlined, size: 50, color: Colors.grey)),
                     ),
                   ),
@@ -504,19 +530,19 @@ class _FilteredShopPageState extends State<FilteredShopPage> {
                   ),
                   Positioned(bottom: 8, right: 8,
                       child: _buildItemOverlayButton(
-                          icon: Icons.shopping_bag_outlined,
-                          onTap: () async {
-                            // Log visit store event
-                            if (widget.token != null) {
-                              await ProfileService.logItemEvent(
-                                itemId: int.parse(item.id),
-                                userId: widget.userId,
-                                eventType: 'visit_store',
-                                token: widget.token!,
-                              );
-                            }
-                            _visitStore(item);
-                          },
+                        icon: Icons.shopping_bag_outlined,
+                        onTap: () async {
+                          // Log visit store event
+                          if (widget.token != null) {
+                            await ProfileService.logItemEvent(
+                              itemId: int.parse(item.id),
+                              userId: widget.userId,
+                              eventType: 'visit_store',
+                              token: widget.token!,
+                            );
+                          }
+                          _visitStore(item);
+                        },
                       )
                   ),
                 ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'landing_screen.dart';
+import 'log_in.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,11 +14,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Navigate to landing screen after 3 seconds
-    Timer(const Duration(seconds: 3), () {
+    // Show splash for 1 second, then go to login
+    Future.delayed(const Duration(seconds: 1), () {
       Navigator.pushReplacement(
-        context, 
-        MaterialPageRoute(builder: (context) => const LandingScreen())
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     });
   }

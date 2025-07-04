@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'services/profile_service.dart';
+import 'constants.dart' show showThemedSnackBar;
 
 class MyInformationPage extends StatefulWidget {
   final String userName;
@@ -48,9 +49,7 @@ class _MyInformationPageState extends State<MyInformationPage> {
     final String name = _nameController.text.trim();
     final String phone = _phoneController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your name'))
-      );
+      showThemedSnackBar(context, 'Please enter your name', type: 'critical');
       return;
     }
     setState(() {
@@ -74,9 +73,7 @@ class _MyInformationPageState extends State<MyInformationPage> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error updating information'))
-        );
+        showThemedSnackBar(context, 'Error updating information', type: 'critical');
       }
     }
   }

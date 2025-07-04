@@ -6,6 +6,7 @@ import 'home_screen.dart';
 import 'config.dart';
 import 'services/profile_service.dart';
 import 'brand_home_screen.dart'; // Will be created next
+import 'constants.dart' show showThemedSnackBar;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,12 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     // Validate inputs
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter both email and password'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showThemedSnackBar(context, 'Please enter both email and password', type: 'critical');
       return;
     }
 
@@ -75,20 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (responseData.containsKey('detail')) {
           errorMessage = responseData['detail'];
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showThemedSnackBar(context, errorMessage, type: 'critical');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showThemedSnackBar(context, 'Error: $e', type: 'critical');
     } finally {
       setState(() {
         _isLoading = false;

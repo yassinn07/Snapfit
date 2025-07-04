@@ -83,12 +83,12 @@ class _BrandStatisticsScreenState extends State<BrandStatisticsScreen> {
     if (photoUrl == null || photoUrl.isEmpty) {
       return '';
     }
-    
+
     // If it's already a full URL, return it as is
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl;
     }
-    
+
     // If it's a relative path, construct the full URL
     return '${Config.apiUrl}/static/$photoUrl';
   }
@@ -149,83 +149,83 @@ class _BrandStatisticsScreenState extends State<BrandStatisticsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredItems.isEmpty
-                    ? const Center(child: Text('No items found.'))
-                    : RefreshIndicator(
-                        onRefresh: _refreshItems,
-                        child: ListView.builder(
-                          itemCount: _filteredItems.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredItems[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 3,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
+                ? const Center(child: Text('No items found.'))
+                : RefreshIndicator(
+              onRefresh: _refreshItems,
+              child: ListView.builder(
+                itemCount: _filteredItems.length,
+                itemBuilder: (context, index) {
+                  final item = _filteredItems[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: item['item_photo_url'] != null && item['item_photo_url'].toString().isNotEmpty
+                                ? Image.network(
+                              _buildImageUrl(item['item_photo_url']),
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 80, color: Colors.grey),
+                            )
+                                : Container(
+                              width: 80,
+                              height: 80,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.image, size: 40, color: Colors.grey),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['item_name'] ?? '',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: item['item_photo_url'] != null && item['item_photo_url'].toString().isNotEmpty
-                                          ? Image.network(
-                                              _buildImageUrl(item['item_photo_url']),
-                                              width: 80,
-                                              height: 80,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 80, color: Colors.grey),
-                                            )
-                                          : Container(
-                                              width: 80,
-                                              height: 80,
-                                              color: Colors.grey[200],
-                                              child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                                            ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item['item_name'] ?? '',
-                                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.touch_app, size: 18, color: Colors.blueGrey),
-                                              const SizedBox(width: 4),
-                                              Text('Users clicked: ${item['users_clicked'] ?? 0}'),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.store, size: 18, color: Colors.green),
-                                              const SizedBox(width: 4),
-                                              Text('Visit store: ${item['visit_store'] ?? 0}'),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.recommend, size: 18, color: Colors.deepOrange),
-                                              const SizedBox(width: 4),
-                                              Text('Recommended: ${item['recommended'] ?? 0}'),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    const Icon(Icons.touch_app, size: 18, color: Colors.blueGrey),
+                                    const SizedBox(width: 4),
+                                    Text('Users clicked: ${item['users_clicked'] ?? 0}'),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.store, size: 18, color: Colors.green),
+                                    const SizedBox(width: 4),
+                                    Text('Visit store: ${item['visit_store'] ?? 0}'),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.recommend, size: 18, color: Colors.deepOrange),
+                                    const SizedBox(width: 4),
+                                    Text('Recommended: ${item['recommended'] ?? 0}'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -235,7 +235,7 @@ class _BrandStatisticsScreenState extends State<BrandStatisticsScreen> {
 
 class AddBrandItemScreen extends StatefulWidget {
   final String token;
-  
+
   const AddBrandItemScreen({Key? key, required this.token}) : super(key: key);
 
   @override
@@ -245,7 +245,7 @@ class AddBrandItemScreen extends StatefulWidget {
 class _AddBrandItemScreenState extends State<AddBrandItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _imagePicker = ImagePicker();
-  
+
   String? _selectedImagePath;
   String _apparelType = '';
   String _subtype = '';
@@ -259,7 +259,7 @@ class _AddBrandItemScreenState extends State<AddBrandItemScreen> {
   bool _isLoading = false;
 
   final List<String> _genderOptions = ['Male', 'Female', 'Unisex'];
-  final List<String> _apparelTypes = ['Top', 'Bottom', 'Shoes', 'Accessories'];
+  final List<String> _apparelTypes = ['Top', 'Bottom', 'Shoes', 'Bags'];
   final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   final List<String> _seasons = ['Spring', 'Summer', 'Fall', 'Winter', 'All Year Long'];
 
@@ -341,7 +341,7 @@ class _AddBrandItemScreenState extends State<AddBrandItemScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F2EF),
       appBar: AppBar(
@@ -353,164 +353,164 @@ class _AddBrandItemScreenState extends State<AddBrandItemScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Image Selection
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: _selectedImagePath != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  File(_selectedImagePath!),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                ),
-                              )
-                            : const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('Tap to select image', style: TextStyle(color: Colors.grey)),
-                                ],
-                              ),
-                      ),
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Image Selection
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: _selectedImagePath != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_selectedImagePath!),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // Apparel Type
-                    DropdownButtonFormField<String>(
-                      value: _apparelType.isEmpty ? null : _apparelType,
-                      decoration: const InputDecoration(
-                        labelText: 'Apparel Type *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _apparelTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
-                      onChanged: (value) => setState(() => _apparelType = value!),
-                      validator: (value) => value == null ? 'Please select apparel type' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Subtype
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Subtype *',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => _subtype = value,
-                      validator: (value) => value?.isEmpty == true ? 'Please enter subtype' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Color
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Color *',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => _color = value,
-                      validator: (value) => value?.isEmpty == true ? 'Please enter color' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Size
-                    DropdownButtonFormField<String>(
-                      value: _size.isEmpty ? null : _size,
-                      decoration: const InputDecoration(
-                        labelText: 'Size *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size))).toList(),
-                      onChanged: (value) => setState(() => _size = value!),
-                      validator: (value) => value == null ? 'Please select size' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Gender (Brand owner's choice)
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      decoration: const InputDecoration(
-                        labelText: 'Item Gender *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _genderOptions.map((gender) => DropdownMenuItem(value: gender, child: Text(gender))).toList(),
-                      onChanged: (value) => setState(() => _gender = value!),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Occasion
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Occasion',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => _occasion = value,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Season
-                    DropdownButtonFormField<String>(
-                      value: _season.isEmpty ? null : _season,
-                      decoration: const InputDecoration(
-                        labelText: 'Season',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _seasons.map((season) => DropdownMenuItem(value: season, child: Text(season))).toList(),
-                      onChanged: (value) => setState(() => _season = value!),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Price
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
-                        border: OutlineInputBorder(),
-                        prefixText: '\$',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) => _price = double.tryParse(value),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Purchase Link
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Purchase Link',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) => _purchaseLink = value,
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Submit Button
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD55F5F),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Add Item'),
-                    ),
-                  ],
+                  )
+                      : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Tap to select image', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 24),
+
+              // Apparel Type
+              DropdownButtonFormField<String>(
+                value: _apparelType.isEmpty ? null : _apparelType,
+                decoration: const InputDecoration(
+                  labelText: 'Apparel Type *',
+                  border: OutlineInputBorder(),
+                ),
+                items: _apparelTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                onChanged: (value) => setState(() => _apparelType = value!),
+                validator: (value) => value == null ? 'Please select apparel type' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Subtype
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Subtype *',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _subtype = value,
+                validator: (value) => value?.isEmpty == true ? 'Please enter subtype' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Color
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Color *',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _color = value,
+                validator: (value) => value?.isEmpty == true ? 'Please enter color' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Size
+              DropdownButtonFormField<String>(
+                value: _size.isEmpty ? null : _size,
+                decoration: const InputDecoration(
+                  labelText: 'Size *',
+                  border: OutlineInputBorder(),
+                ),
+                items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size))).toList(),
+                onChanged: (value) => setState(() => _size = value!),
+                validator: (value) => value == null ? 'Please select size' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Gender (Brand owner's choice)
+              DropdownButtonFormField<String>(
+                value: _gender,
+                decoration: const InputDecoration(
+                  labelText: 'Item Gender *',
+                  border: OutlineInputBorder(),
+                ),
+                items: _genderOptions.map((gender) => DropdownMenuItem(value: gender, child: Text(gender))).toList(),
+                onChanged: (value) => setState(() => _gender = value!),
+              ),
+              const SizedBox(height: 16),
+
+              // Occasion
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Occasion',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _occasion = value,
+              ),
+              const SizedBox(height: 16),
+
+              // Season
+              DropdownButtonFormField<String>(
+                value: _season.isEmpty ? null : _season,
+                decoration: const InputDecoration(
+                  labelText: 'Season',
+                  border: OutlineInputBorder(),
+                ),
+                items: _seasons.map((season) => DropdownMenuItem(value: season, child: Text(season))).toList(),
+                onChanged: (value) => setState(() => _season = value!),
+              ),
+              const SizedBox(height: 16),
+
+              // Price
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Price',
+                  border: OutlineInputBorder(),
+                  prefixText: '\$',
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) => _price = double.tryParse(value),
+              ),
+              const SizedBox(height: 16),
+
+              // Purchase Link
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Purchase Link',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _purchaseLink = value,
+              ),
+              const SizedBox(height: 24),
+
+              // Submit Button
+              ElevatedButton(
+                onPressed: _submitForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD55F5F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Add Item'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 } 

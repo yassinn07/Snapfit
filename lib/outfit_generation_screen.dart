@@ -8,6 +8,7 @@ import 'services/shop_service.dart';
 import 'add_item.dart';
 import 'services/closet_service.dart';
 import 'dart:io';
+import 'constants.dart' show showThemedSnackBar;
 
 class OutfitGenerationScreen extends StatefulWidget {
   final List<ShopItem> outfitItems;
@@ -210,7 +211,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
               token: widget.token,
               originalImagePath: widget.originalImagePath,
               onItemAdded: (int newId, ShopItem completedItem) async {
-                setState(() {
+      setState(() {
                   // Replace any existing item for this category
                   final idx = _outfitItems.indexWhere((item) => item.category.toLowerCase() == (missingCategory ?? ''));
                   if (idx != -1) {
@@ -271,14 +272,7 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
     if (topId == null || bottomId == null || shoesId == null) {
       print('DEBUG: topId=$topId, bottomId=$bottomId, shoesId=$shoesId');
       print('DEBUG: _outfitItems=${_outfitItems.map((item) => 'id: \\${item.id}, cat: \\${item.category}, name: \\${item.name}').toList()}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Missing required items for outfit.', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'Missing required items for outfit.', type: 'critical');
       return;
     }
     
@@ -298,36 +292,15 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
         body: json.encode(body),
       );
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Outfit saved successfully!', style: TextStyle(color: Colors.white)),
-            backgroundColor: Color(0xFFD55F5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showThemedSnackBar(context, 'Outfit saved successfully!', type: 'success');
         // Navigate back to the previous screen after a short delay
         await Future.delayed(const Duration(milliseconds: 500));
         Navigator.of(context).pop();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save outfit.', style: TextStyle(color: Colors.white)),
-            backgroundColor: Color(0xFFD55F5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showThemedSnackBar(context, 'Failed to save outfit.', type: 'critical');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving outfit: $e', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'Error saving outfit: $e', type: 'critical');
     }
   }
   
@@ -474,12 +447,12 @@ class _OutfitGenerationScreenState extends State<OutfitGenerationScreen> {
               final shopService = ShopService(token: null); // Pass token if needed
               final fullItem = await shopService.getShopItemById(item.id);
               if (fullItem != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
+        Navigator.push(
+          context,
+          MaterialPageRoute(
                     builder: (context) => ItemScreen(item: fullItem, userId: widget.userId),
-                  ),
-                );
+          ),
+        );
               }
             }
           : null, // Disable tap for closet items or invalid shop items
@@ -660,7 +633,7 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields.')));
+      showThemedSnackBar(context, 'Please fill all required fields.', type: 'critical');
       return;
     }
     setState(() { _isLoading = true; });
@@ -694,7 +667,7 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
         );
         widget.onItemAdded(newId, completedItem);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
+        showThemedSnackBar(context, 'Failed to add item.', type: 'critical');
       }
     } finally {
       setState(() { _isLoading = false; });
@@ -735,10 +708,10 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
           _occasionController.text = _occasion ?? '';
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to classify image.')));
+        showThemedSnackBar(context, 'Failed to classify image.', type: 'critical');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      showThemedSnackBar(context, 'Error: $e', type: 'critical');
     } finally {
       setState(() { _isClassifying = false; });
     }
@@ -774,10 +747,10 @@ class _ItemDetailsFormState extends State<ItemDetailsForm> {
                       )
                     : (widget.processedImageUrl != null && widget.processedImageUrl!.isNotEmpty)
                       ? Image.file(
-                          File(widget.processedImageUrl!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+                        File(widget.processedImageUrl!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
                         )
                       : (widget.originalImagePath != null && widget.originalImagePath!.isNotEmpty)
                         ? Image.file(

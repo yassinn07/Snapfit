@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'liked_items_screen.dart';
 import 'services/profile_service.dart';
 import 'config.dart';
+import 'constants.dart' show showThemedSnackBar;
 
 class MyShopPage extends StatefulWidget {
   final String? token;
@@ -71,9 +72,7 @@ class _MyShopPageState extends State<MyShopPage> {
             _favoriteIds.remove(itemId);
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update favorite status')),
-        );
+        showThemedSnackBar(context, 'Failed to update favorite status', type: 'critical');
       }
     } catch (e) {
       setState(() {
@@ -83,9 +82,7 @@ class _MyShopPageState extends State<MyShopPage> {
           _favoriteIds.remove(itemId);
         }
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error updating favorite status')),
-      );
+      showThemedSnackBar(context, 'Error updating favorite status', type: 'critical');
     }
   }
 

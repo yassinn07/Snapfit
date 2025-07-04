@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'log_in.dart'; // Assuming this is your login screen
 import 'config.dart'; // Your API config
+import 'constants.dart' show showThemedSnackBar;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -30,23 +31,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final password = _passwordController.text.trim();
 
     if (username.isEmpty || email.isEmpty || password.isEmpty) {
-      _showErrorDialog('Please fill all required fields: Username, Email, and Password.');
+      showThemedSnackBar(context, 'Please fill all required fields: Username, Email, and Password.', type: 'critical');
       return;
     }
 
     if (_userType == null) {
-      _showErrorDialog('Please select a user type (Consumer or Brand).');
+      showThemedSnackBar(context, 'Please select a user type (Consumer or Brand).', type: 'critical');
       return;
     }
 
     // Specific field validation for consumer
     if (_userType == 'Consumer') {
       if (_size == null || _size!.isEmpty) {
-        _showErrorDialog('Please select your size.');
+        showThemedSnackBar(context, 'Please select your size.', type: 'critical');
         return;
       }
       if (_gender == null || _gender!.isEmpty) {
-        _showErrorDialog('Please select your gender.');
+        showThemedSnackBar(context, 'Please select your gender.', type: 'critical');
         return;
       }
     }
@@ -54,7 +55,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     // Specific field validation for brand
     if (_userType == 'Brand') {
       if (_descriptionController.text.trim().isEmpty) {
-        _showErrorDialog('Please enter a brand description.');
+        showThemedSnackBar(context, 'Please enter a brand description.', type: 'critical');
         return;
       }
     }
@@ -97,9 +98,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (response.statusCode == 201) {
         // Success - navigate to login screen
         if (mounted) { // Check if the widget is still in the tree
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Signup successful! Please log in.'), backgroundColor: Colors.green),
-          );
+          showThemedSnackBar(context, 'Signup successful! Please log in.', type: 'success');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -123,11 +122,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
           // If response.body is not a valid JSON or doesn't have 'detail'/'message'
           errorMessage = 'Signup failed: $responseBody (Could not parse error details)';
         }
-        _showErrorDialog(errorMessage);
+        showThemedSnackBar(context, errorMessage, type: 'critical');
       }
     } catch (e) {
       // setState(() { _isLoading = false; }); // Hide loading
-      _showErrorDialog('An error occurred: ${e.toString()}. Please check your connection and try again.');
+      showThemedSnackBar(context, 'An error occurred: ${e.toString()}. Please check your connection and try again.', type: 'critical');
     }
   }
 

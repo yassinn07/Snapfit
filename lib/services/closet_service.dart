@@ -13,7 +13,8 @@ class ClosetItem {
   final String occasion;
   final String gender;
   final String brand;
-  
+  final String? path3d; // Add this line for 3D model path
+
   ClosetItem({
     required this.id,
     required this.name,
@@ -25,8 +26,9 @@ class ClosetItem {
     this.occasion = '',
     this.gender = '',
     this.brand = '',
+    this.path3d, // Add this line
   });
-  
+
   factory ClosetItem.fromJson(Map<String, dynamic> json) {
     return ClosetItem(
       id: json['id'].toString(),
@@ -39,9 +41,10 @@ class ClosetItem {
       occasion: json['occasion'] ?? '',
       gender: json['gender'] ?? '',
       brand: json['brand'] ?? '',
+      path3d: json['path_3d'], // Add this line
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -53,18 +56,19 @@ class ClosetItem {
       'occasion': occasion,
       'gender': gender,
       'brand': brand,
+      'path_3d': path3d, // Add this line
     };
   }
 }
 
 class ClosetService {
   final String token;
-  
+
   ClosetService({required this.token});
-  
+
   Future<List<ClosetItem>> getClosetItems() async {
     final url = Uri.parse('${Config.apiUrl}/clothes/user');
-    
+
     try {
       final response = await http.get(
         url,
@@ -73,7 +77,7 @@ class ClosetService {
           'Authorization': 'Bearer $token',
         },
       );
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((item) => ClosetItem.fromJson(item)).toList();
@@ -85,10 +89,10 @@ class ClosetService {
       throw Exception('Failed to load closet items: $e');
     }
   }
-  
+
   Future<ClosetItem> addClosetItem(ClosetItem item) async {
     final url = Uri.parse('${Config.apiUrl}/clothes');
-    
+
     try {
       final response = await http.post(
         url,
@@ -98,7 +102,7 @@ class ClosetService {
         },
         body: json.encode(item.toJson()),
       );
-      
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
         return ClosetItem.fromJson(data);
@@ -110,7 +114,7 @@ class ClosetService {
       throw Exception('Failed to add closet item: $e');
     }
   }
-  
+
   Future<(bool, String?)> deleteClosetItem(String itemId) async {
     final url = Uri.parse('${Config.apiUrl}/clothes/$itemId');
     try {
@@ -136,10 +140,10 @@ class ClosetService {
       return (false, 'Error deleting item: $e');
     }
   }
-  
+
   Future<ClosetItem> updateClosetItem(String itemId, ClosetItem item) async {
     final url = Uri.parse('${Config.apiUrl}/clothes/$itemId');
-    
+
     try {
       final response = await http.put(
         url,
@@ -149,7 +153,7 @@ class ClosetService {
         },
         body: json.encode(item.toJson()),
       );
-      
+
       if (response.statusCode == 200) {
         final dynamic data = json.decode(response.body);
         return ClosetItem.fromJson(data);
@@ -166,16 +170,16 @@ class ClosetService {
     try {
       final url = Uri.parse('${Config.apiUrl}/clothes/upload');
       final request = http.MultipartRequest('POST', url);
-      
+
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
-      
+
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
-      
+
       final response = await request.send();
       final responseString = await response.stream.bytesToString();
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('Item uploaded successfully');
         final responseData = json.decode(responseString);

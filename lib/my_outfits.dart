@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'services/outfit_service.dart'; // Import the outfit service
 import 'item_screen.dart'; // For shop navigation
 import 'filtered_shop_page.dart'; // For ShopItem
+import 'constants.dart' show showThemedSnackBar;
 
 // Outfit model representing a complete outfit
 class Outfit {
@@ -109,9 +110,7 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error loading your outfits'))
-        );
+        showThemedSnackBar(context, 'Error loading your outfits', type: 'critical');
       }
     }
   }
@@ -156,16 +155,12 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
       final success = await outfitService.toggleOutfitFavorite(outfitId);
       
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update favorite status'))
-        );
+        showThemedSnackBar(context, 'Failed to update favorite status', type: 'critical');
       }
     } catch (e) {
       print("Error toggling favorite for outfit $outfitId: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error updating favorite status'))
-        );
+        showThemedSnackBar(context, 'Error updating favorite status', type: 'critical');
       }
     }
   }
@@ -221,38 +216,18 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Outfit removed successfully', style: TextStyle(color: Colors.white)),
-              backgroundColor: Color(0xFFD55F5F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          Navigator.of(context).pop(); // Close the dialog/modal
+          showThemedSnackBar(context, 'Outfit removed successfully', type: 'success');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg ?? 'Failed to remove outfit', style: TextStyle(color: Colors.white)),
-              backgroundColor: Color(0xFFD55F5F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          showThemedSnackBar(context, errorMsg ?? 'Failed to remove outfit', type: 'critical');
         }
       }
     } catch (e) {
       print("Error deleting outfit $outfitId: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error removing outfit', style: TextStyle(color: Colors.white)),
-            backgroundColor: Color(0xFFD55F5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showThemedSnackBar(context, 'Error removing outfit', type: 'critical');
       }
     }
   }
@@ -287,23 +262,17 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
         });
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('New outfit created successfully'))
-          );
+          showThemedSnackBar(context, 'New outfit created successfully', type: 'success');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to create outfit'))
-          );
+          showThemedSnackBar(context, 'Failed to create outfit', type: 'critical');
         }
       }
     } catch (e) {
       print("Error creating outfit: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error creating outfit'))
-        );
+        showThemedSnackBar(context, 'Error creating outfit', type: 'critical');
       }
     }
   }
@@ -782,16 +751,19 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                               ? outfit.itemImageUrls[i]
                               : 'http://10.0.2.2:8000/static/${normalizeImagePath(outfit.itemImageUrls[i])}';
                             print('Loading image: $imageUrl');
-                            return Image.network(
-                              imageUrl,
-                              width: 90,
-                              height: 90,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                width: 90,
-                                height: 90,
-                                color: Colors.grey[200],
-                                child: const Icon(Icons.broken_image, size: 32, color: Colors.grey),
+                            return Container(
+                              width: 110,
+                              height: 110,
+                              color: Colors.white,
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  width: 110,
+                                  height: 110,
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.broken_image, size: 32, color: Colors.grey),
+                                ),
                               ),
                             );
                           })(),
@@ -963,23 +935,17 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
         });
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categories updated successfully'))
-          );
+          showThemedSnackBar(context, 'Categories updated successfully', type: 'success');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update categories'))
-          );
+          showThemedSnackBar(context, 'Failed to update categories', type: 'critical');
         }
       }
     } catch (e) {
       print("Error updating outfit categories: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error updating categories'))
-        );
+        showThemedSnackBar(context, 'Error updating categories', type: 'critical');
       }
     }
   }

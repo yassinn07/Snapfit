@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'services/profile_service.dart';
+import 'constants.dart' show showThemedSnackBar;
 
 class SendFeedbackPage extends StatefulWidget {
   final String token;
@@ -29,9 +30,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
     final String feedback = _feedbackController.text.trim();
     
     if (feedback.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your feedback'))
-      );
+      showThemedSnackBar(context, 'Please enter your feedback');
       return;
     }
 
@@ -52,9 +51,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
           // Return to previous screen with success flag
           Navigator.pop(context, true);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send feedback'))
-          );
+          showThemedSnackBar(context, 'Failed to send feedback', type: 'critical');
         }
       }
     } catch (e) {
@@ -64,9 +61,7 @@ class _SendFeedbackPageState extends State<SendFeedbackPage> {
           _isLoading = false;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error sending feedback'))
-        );
+        showThemedSnackBar(context, 'Error sending feedback', type: 'critical');
       }
     }
   }

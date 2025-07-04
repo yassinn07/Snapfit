@@ -20,6 +20,7 @@ import 'all_category_items_page.dart'; // Import for AllCategoryItemsPage
 import 'services/brand_service.dart'; // Import brand service
 import 'ai_stylist_page.dart';
 import 'services/outfit_service.dart'; // Add this import
+import 'config.dart';
 
 // ----- Main Navigation Screen -----
 
@@ -540,8 +541,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildOutfitPreviewCard(Outfit outfit, String fontFamily) {
-    // Use the first image as preview, or a placeholder
-    final String? imageUrl = outfit.itemImageUrls.isNotEmpty ? outfit.itemImageUrls[0] : null;
+    // Show all item images stacked in one container, with the main image filling the card and others rotated
     return Container(
       width: 228,
       margin: const EdgeInsets.only(right: 18),
@@ -563,16 +563,43 @@ class _HomePageState extends State<HomePage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl.startsWith('http')
-                        ? imageUrl
-                        : 'http://10.0.2.2:8000/static/${normalizeImagePath(imageUrl)}',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 50, color: Colors.grey),
-                      loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: CircularProgressIndicator()),
-                    )
-                  : const Icon(Icons.image_outlined, size: 80, color: Colors.grey),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (outfit.itemImageUrls.length > 2)
+                    Positioned(
+                      left: 36,
+                      top: 36,
+                      child: Transform.rotate(
+                        angle: 10 * 3.1415926535 / 180, // +10 degrees in radians
+                        child: _buildOutfitItemImage(
+                          outfit.itemImageUrls[2],
+                          140,
+                          0.5,
+                        ),
+                      ),
+                    ),
+                  if (outfit.itemImageUrls.length > 1)
+                    Positioned(
+                      left: 18,
+                      top: 18,
+                      child: Transform.rotate(
+                        angle: -10 * 3.1415926535 / 180, // -10 degrees in radians
+                        child: _buildOutfitItemImage(
+                          outfit.itemImageUrls[1],
+                          170,
+                          0.7,
+                        ),
+                      ),
+                    ),
+                  if (outfit.itemImageUrls.isNotEmpty)
+                    _buildOutfitItemImage(
+                      outfit.itemImageUrls[0],
+                      204,
+                      1.0,
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -581,7 +608,7 @@ class _HomePageState extends State<HomePage> {
               child: Wrap(
                 spacing: 6.0,
                 runSpacing: 4.0,
-                children: outfit.tags.map((tag) => _buildTagChip(tag, fontFamily)).toList(),
+                children: outfit.tags.take(3).map((tag) => _buildTagChip(tag, fontFamily)).toList(),
               ),
             ),
         ],
@@ -687,9 +714,9 @@ class _HomePageState extends State<HomePage> {
                                     child: imageUrl != null
                                         ? Image.network(
                                         imageUrl.startsWith('http')
-                                          ? imageUrl
-                                          : 'http://10.0.2.2:8000/static/${normalizeImagePath(imageUrl)}',
-                                        fit: BoxFit.cover,
+                                            ? imageUrl
+                                            : '${Config.baseUrl}/static/${normalizeImagePath(imageUrl)}',
+                                        fit: BoxFit.contain,
                                         errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 50, color: Colors.grey),
                                         loadingBuilder: (context, child, loadingProgress) => loadingProgress == null ? child : const Center(child: CircularProgressIndicator())
                                     )
@@ -758,37 +785,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTagChip(String tag, String fontFamily) {
-    Color bgColor;
-    switch (tag.toLowerCase()) {
-      case 'everyday':
-        bgColor = const Color(0xFFD2EAB8);
-        break;
-      case 'party':
-        bgColor = const Color(0xFFFED5D9);
-        break;
-      case 'items':
-        bgColor = const Color(0xFFE6E6E6);
-        break;
-      default:
-        bgColor = Colors.grey.shade300;
+    Color bgColor = _getCategoryColor(tag);
+    Color textColor = Colors.white;
+    if (tag.toLowerCase() == 'everyday') {
+      textColor = Colors.black87;
     }
     return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
-        decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(20.0)
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20.0),
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        tag,
+        style: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          letterSpacing: -0.02 * 14,
+          color: textColor,
         ),
-        child: Text(
-            tag,
-            style: TextStyle(
-                fontFamily: fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                letterSpacing: -0.02 * 14,
-                color: Colors.black
-            )
-        )
+      ),
     );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'everyday': return const Color(0xFFD6E4BA);
+      case 'work': return Colors.blueGrey.shade200;
+      case 'workout': return Colors.orange.shade200;
+      case 'party': return Colors.pink.shade200;
+      case 'weekend': return Colors.purple.shade200;
+      default: return Colors.grey.shade300;
+    }
   }
 }
 
@@ -1595,7 +1631,7 @@ class _ClosetPageState extends State<ClosetPage> {
                   ),
 
 
-  ])));}
+                ])));}
 
   Widget _buildProgressIndicator(BuildContext context, String label, int current, int total) {
     double progress = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
@@ -1750,7 +1786,7 @@ class _ClosetPageState extends State<ClosetPage> {
                           child: item.imageUrl != null
                               ? Image.network(
                               item.imageUrl!,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) =>
                                   Center(
                                       child: Column(
@@ -1975,6 +2011,24 @@ class _ClosetPageState extends State<ClosetPage> {
         ),
       );
     }
+  }
+
+  void showThemedSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: 'Archivo'),
+          textAlign: TextAlign.center,
+        ),
+        backgroundColor: const Color(0xFFD55F5F),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        elevation: 6,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }
 
@@ -2276,7 +2330,7 @@ class _ProfilePageState extends State<ProfilePage> {
     String getFullImageUrl(String? path) {
       if (path == null) return '';
       if (path.startsWith('http')) return path;
-      return 'http://10.0.2.2:8000/static/$path'; // Adjust for your setup or use Config.apiUrl
+      return '${Config.baseUrl}/static/$path'; // Now using Config.baseUrl
     }
 
     return Scaffold(
@@ -2305,7 +2359,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 getFullImageUrl(imageUrl),
                                 width: 100,
                                 height: 100,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) => Center(
                                   child: Text(
                                     userInitial,
@@ -2744,15 +2798,19 @@ Widget _buildModernOutfitPreviewCard(Outfit outfit) {
 }
 
 Widget _buildOutfitItemImage(String url, double size, double opacity) {
+  // Fix: handle both absolute and relative URLs
+  String imageUrl = url.startsWith('http')
+      ? url
+      : '${Config.baseUrl}/static/${normalizeImagePath(url)}';
   return Opacity(
     opacity: opacity,
     child: ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
-        url,
+        imageUrl,
         width: size,
         height: size,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => Container(
           width: size,
           height: size,

@@ -10,6 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart'; // For userId
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'outfit_generation_screen.dart';
+import 'config.dart';
+import 'services/closet_service.dart';
+import '3d_model_viewer.dart'; // Import 3D model viewer
+import 'constants.dart' show showThemedSnackBar;
 
 // Placeholder for related item data model (can be the same as ShopItem)
 // TODO: Replace with your actual data structure if different
@@ -44,15 +48,17 @@ class _ItemScreenState extends State<ItemScreen> {
   Future<void> _fetchRelatedItems() async {
     setState(() { _isLoadingRelated = true; });
     try {
-      // Fetch related items from the backend (e.g., same category, exclude current item)
-      final shopService = ShopService(token: null); // Use token if needed
-      final allItems = await shopService.getShopItems();
-      setState(() {
-        _relatedItems = allItems
-          .where((item) => item.category == widget.item.category && item.id != widget.item.id)
-          .toList();
-        _isLoadingRelated = false;
-      });
+      // Fetch top 5 similar items using CLIP similarity from backend
+      final response = await http.get(Uri.parse('${Config.baseUrl}/clothes/similar-items/${widget.item.id}?top_k=5'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _relatedItems = data.map((item) => ShopItem.fromJson(item)).toList();
+          _isLoadingRelated = false;
+        });
+      } else {
+        setState(() { _isLoadingRelated = false; });
+      }
     } catch (e) {
       setState(() { _isLoadingRelated = false; });
     }
@@ -60,14 +66,7 @@ class _ItemScreenState extends State<ItemScreen> {
 
   void _toggleFavorite() async {
     if (widget.token == null || widget.token!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('You must be logged in to favorite items.', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'You must be logged in to favorite items.', type: 'critical');
       return;
     }
     final profileService = ProfileService(token: widget.token!);
@@ -84,14 +83,7 @@ class _ItemScreenState extends State<ItemScreen> {
           _isFavorite = !newFavoriteState;
           widget.item.isFavorite = !newFavoriteState;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update favorite status', style: TextStyle(color: Colors.white)),
-            backgroundColor: Color(0xFFD55F5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showThemedSnackBar(context, 'Failed to update favorite status', type: 'critical');
       } else {
         // Notify parent/shop screen if callback is provided
         if (widget.onFavoriteChanged != null) {
@@ -103,14 +95,7 @@ class _ItemScreenState extends State<ItemScreen> {
         _isFavorite = !newFavoriteState;
         widget.item.isFavorite = !newFavoriteState;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating favorite status', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'Error updating favorite status', type: 'critical');
     }
   }
 
@@ -119,17 +104,113 @@ class _ItemScreenState extends State<ItemScreen> {
       _isGeneratingOutfits = true;
     });
     try {
-      // Step 1: Send the item's image to the backend for recommendation
-      final recommendations = await _recommendOutfitFromShopItem(widget.item);
+      // Step 1: Fetch closet items for the user
+      final closetService = ClosetService(token: widget.token ?? '');
+      final closetItems = await closetService.getClosetItems();
+      final String userGender = widget.item.gender?.toLowerCase() ?? 'male';
+
+      print('DEBUG: Found ${closetItems.length} closet items');
+      print('DEBUG: Current item category: ${widget.item.category}, subcategory: ${widget.item.subcategory}');
+      print('DEBUG: User gender: $userGender');
+
+      // Step 2: Convert ClosetItem to ShopItem for compatibility
+      List<ShopItem> closetShopItems = closetItems.map((closetItem) => ShopItem(
+        id: closetItem.id,
+        name: closetItem.name,
+        description: '',
+        category: closetItem.category,
+        userName: closetItem.brand,
+        price: '',
+        imageUrl: closetItem.imageUrl,
+        isFavorite: false,
+        purchaseLink: null,
+        color: closetItem.color,
+        size: closetItem.size,
+        occasion: closetItem.occasion,
+        gender: closetItem.gender,
+        subcategory: closetItem.subcategory,
+        brand: closetItem.brand,
+        source: 'closet',
+      )).toList();
+
+      // Debug: Print all closet item categories
+      for (var item in closetShopItems) {
+        print('DEBUG: Closet item - ID: ${item.id}, Category: ${item.category}, Subcategory: ${item.subcategory}, Gender: ${item.gender}');
+      }
+
+      // Step 3: Select outfit items from closet (excluding the current item)
+      // Helper to check if two items are the same (by id and source)
+      bool isSameItem(ShopItem a, ShopItem b) => a.id == b.id && (a.source ?? '') == (b.source ?? '');
+
+      // Determine the category of the current item
+      final String itemCat = widget.item.category.toLowerCase();
+      final String itemSubcat = widget.item.subcategory.toLowerCase();
+
+      // Helper to find a closet item by category, not the current item
+      ShopItem? findClosetItem(List<String> categories) {
+        for (final item in closetShopItems) {
+          final itemCategory = item.category.toLowerCase();
+          final itemSubcategory = item.subcategory.toLowerCase();
+          final itemGender = item.gender.toLowerCase();
+
+          bool categoryMatches = categories.any((cat) =>
+          itemCategory.contains(cat) || itemSubcategory.contains(cat));
+          bool notSameItem = !isSameItem(item, widget.item);
+          bool genderMatches = itemGender.isEmpty || itemGender == userGender || itemGender == 'unisex';
+
+          if (categoryMatches && notSameItem && genderMatches) {
+            print('DEBUG: Found matching item - ID: ${item.id}, Category: ${item.category}, Gender: ${item.gender}');
+            return item;
+          }
+        }
+        print('DEBUG: No matching item found for categories: $categories');
+        return null;
+      }
+
+      // Build the outfit: always include the current item, then fill in the rest from closet
+      List<ShopItem> outfitItems = [widget.item.copyWith(source: 'shop', imageUrl: widget.item.imageUrl)];
+
+      // If current item is a top, find bottom and shoes
+      if (itemCat.contains('top') || itemSubcat.contains('top') || itemCat.contains('shirt') || itemSubcat.contains('shirt') ||
+          itemCat.contains('upper body') || itemSubcat.contains('upper body')) {
+        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
+        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
+        if (bottom != null) outfitItems.add(bottom);
+        if (shoes != null) outfitItems.add(shoes);
+      } else if (itemCat.contains('bottom') || itemSubcat.contains('bottom') || itemCat.contains('pant') || itemSubcat.contains('pant') ||
+          itemCat.contains('skirt') || itemSubcat.contains('skirt') || itemCat.contains('lower body') || itemSubcat.contains('lower body')) {
+        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
+        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
+        if (top != null) outfitItems.add(top);
+        if (shoes != null) outfitItems.add(shoes);
+      } else if (itemCat.contains('shoe') || itemSubcat.contains('shoe') || itemCat.contains('footwear') || itemSubcat.contains('footwear')) {
+        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
+        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
+        if (top != null) outfitItems.add(top);
+        if (bottom != null) outfitItems.add(bottom);
+      } else {
+        // Fallback: try to find top, bottom, shoes
+        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
+        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
+        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
+        if (top != null) outfitItems.add(top);
+        if (bottom != null) outfitItems.add(bottom);
+        if (shoes != null) outfitItems.add(shoes);
+      }
+
+      print('DEBUG: Final outfit has ${outfitItems.length} items');
+
       setState(() {
         _isGeneratingOutfits = false;
       });
-      if (recommendations == null) {
+
+      // More flexible check: allow partial outfits (at least 2 items total)
+      if (outfitItems.length < 2) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Outfit Generation'),
-            content: const Text('No outfits could be generated for this item.'),
+            content: const Text('Not enough items in your closet to generate an outfit. Please add more items to your closet.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -140,44 +221,8 @@ class _ItemScreenState extends State<ItemScreen> {
         );
         return;
       }
-      // Step 2: Build ShopItem list for OutfitGenerationScreen
-      final List<ShopItem> outfitItems = [];
-      // Add the original item first, ensuring source is 'shop' and imageUrl is preserved
-      outfitItems.add(widget.item.copyWith(source: 'shop', imageUrl: widget.item.imageUrl));
-      // Helper to check if two items are the same category
-      bool isSameCategory(ShopItem a, dynamic b) {
-        final aCat = a.category.toLowerCase();
-        final bCat = (b['category'] ?? '').toString().toLowerCase();
-        return aCat == bCat;
-      }
-      for (var cat in ['top', 'bottom', 'shoes']) {
-        final catRecs = recommendations[cat];
-        final item = (catRecs?['closet'] ?? catRecs?['shop']);
-        if (item != null) {
-          // Only add if it's not the same category as the original item
-          if (!isSameCategory(widget.item, item)) {
-            outfitItems.add(ShopItem(
-              id: item['id'].toString(),
-              name: (item['name'] != null && (item['brand'] ?? '').toString().isNotEmpty)
-                ? '${item['name']} | ${item['brand']}'
-                : (item['name'] ?? (item['subcategory'] ?? '')),
-              description: '',
-              category: item['category'] ?? '',
-              userName: item['brand'] ?? '',
-              price: item['price']?.toString() ?? '',
-              imageUrl: item['path'],
-              color: item['color'] ?? '',
-              size: item['size'] ?? '',
-              occasion: item['occasion'] ?? '',
-              gender: item['gender'] ?? '',
-              subcategory: item['subcategory'] ?? '',
-              brand: item['brand'] ?? '',
-              source: item['source'] ?? 'shop',
-            ));
-          }
-        }
-      }
-      // Step 3: Navigate to OutfitGenerationScreen
+
+      // Step 4: Navigate to OutfitGenerationScreen
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -194,37 +239,8 @@ class _ItemScreenState extends State<ItemScreen> {
       setState(() {
         _isGeneratingOutfits = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error generating outfits: $e', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'Error generating outfits: $e', type: 'critical');
     }
-  }
-
-  // Helper to call backend AI stylist for shop item
-  Future<Map<String, dynamic>?> _recommendOutfitFromShopItem(ShopItem item) async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/ai/recommend-outfit-by-item-id'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'user_id': widget.userId,
-          'item_id': int.parse(item.id),
-        }),
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        // data['recommendations'] is expected to be a map with 'top', 'bottom', 'shoes'
-        return data['recommendations'] as Map<String, dynamic>?;
-      }
-    } catch (e) {
-      // Handle error
-    }
-    return null;
   }
 
   void _visitStore() async {
@@ -243,24 +259,10 @@ class _ItemScreenState extends State<ItemScreen> {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open store URL: ${widget.item.purchaseLink}', style: TextStyle(color: Colors.white)),
-            backgroundColor: Color(0xFFD55F5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showThemedSnackBar(context, 'Could not open store URL: ${widget.item.purchaseLink}', type: 'critical');
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No store link available for this item', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFFD55F5F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      showThemedSnackBar(context, 'No store link available for this item', type: 'normal');
     }
   }
 
@@ -299,28 +301,6 @@ class _ItemScreenState extends State<ItemScreen> {
               // --- Main Item Image Area (CSS: Rectangle 113) ---
               _buildImageArea(context, widget.item, defaultFontFamily),
 
-              // --- 3D Model Placeholder ---
-              // TODO: Integrate your ML-powered 3D model viewer widget here when the model is deployed.
-              // For example: ThreeDModelViewer(item: widget.item)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[400]!, width: 1),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      '3D Model Preview Here (ML model integration point)',
-                      style: TextStyle(fontSize: 18, color: Colors.black54),
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 20), // Spacing below image area
 
               // --- Item Details & Generate Button Row ---
@@ -333,26 +313,26 @@ class _ItemScreenState extends State<ItemScreen> {
               // --- Related Items Section ---
               const SizedBox(height: 30),
               Text(
-                "How to style it",
+                "You may also like",
                 style: TextStyle(fontFamily: defaultFontFamily, fontSize: 18, fontWeight: FontWeight.w500, color: Colors.black),
               ),
               const SizedBox(height: 12),
               _isLoadingRelated
                   ? const Center(child: CircularProgressIndicator())
                   : _relatedItems.isEmpty
-                      ? const Text("No related items found.")
-                      : SizedBox(
-                          height: 220,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _relatedItems.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final related = _relatedItems[index];
-                              return _buildRelatedItemCard(context, related, defaultFontFamily);
-                            },
-                          ),
-                        ),
+                  ? const Text("No related items found.")
+                  : SizedBox(
+                height: 220,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _relatedItems.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final related = _relatedItems[index];
+                    return _buildRelatedItemCard(context, related, defaultFontFamily);
+                  },
+                ),
+              ),
 
               const SizedBox(height: 20), // Spacing (approx top: 448px for Add to Bag)
 
@@ -361,7 +341,7 @@ class _ItemScreenState extends State<ItemScreen> {
 
               const SizedBox(height: 40), // Spacing (approx top: 527px for How to Style)
 
-              // --- How to Style It Section ---
+              // --- You may also like Section ---
               // (Removed redundant section)
               const SizedBox(height: 20), // Bottom padding
 
@@ -376,6 +356,13 @@ class _ItemScreenState extends State<ItemScreen> {
 
   // Builds the main image container with overlay buttons
   Widget _buildImageArea(BuildContext context, ShopItem item, String fontFamily) {
+    // Debug: Print the path3d value and button visibility
+    print('DEBUG: Item path3d value: "${item.path3d}"');
+    print('DEBUG: Item path3d is null: ${item.path3d == null}');
+    print('DEBUG: Item path3d is empty: ${item.path3d?.isEmpty}');
+    print('DEBUG: Should show 3D button: ${item.path3d != null && item.path3d!.isNotEmpty && item.path3d!.toLowerCase().endsWith('.glb')}');
+    print('DEBUG: Item ID: ${item.id}, Name: ${item.name}');
+
     return Container(
       height: 250, // Adjusted height, CSS height 215px seems small for image+buttons
       decoration: BoxDecoration(
@@ -388,49 +375,59 @@ class _ItemScreenState extends State<ItemScreen> {
           Positioned.fill(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              // TODO: Replace placeholder with actual Image widget (CSS: image-removebg-preview (26) 2)
               child: item.imageUrl != null
-                  ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain, 
-                    errorBuilder: (context, error, stackTrace) => 
-                      const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)))
+                  ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                  const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)))
                   : const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Colors.grey)),
             ),
           ),
-          // --- Overlay Buttons (Based on CSS positions relative to Rectangle 113) ---
-          // Favorite Button (Top-Left - CSS: Ellipse 122, heart--...)
+          // Favorite Button (Top-Left)
           Positioned(
-            top: 8, // Approx from CSS top: 139px vs Rect top: 132px
-            left: 8, // Approx from CSS left: 52px vs Rect left: 35px
+            top: 8,
+            left: 8,
             child: _buildItemOverlayButton(
               icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
               iconColor: _isFavorite ? Colors.red : Colors.black.withOpacity(0.7),
               onTap: _toggleFavorite,
             ),
           ),
-          // Generate Outfits Button (Top-Right - replaces AI Match/Check Button)
-          Positioned(
-            top: 8, // Approx from CSS top: 139px vs Rect top: 132px
-            right: 8, // Approx from CSS left: 345px vs Rect left: 35px + width 354px
-            child: _buildItemOverlayButton(
-              icon: Icons.view_in_ar, // 3D cube icon for 3D modeling
-              onTap: () {
-                // TODO: Integrate ML-powered 3D model viewer here when ready
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('3D Model'),
-                    content: const Text('3D model coming soon!'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('OK'),
+          // 3D Model Button (Top-Right) - Only show if path3d is a valid .glb file
+          if (item.path3d != null && item.path3d!.isNotEmpty && item.path3d!.toLowerCase().endsWith('.glb'))
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.white,
+                shape: const CircleBorder(),
+                elevation: 1.0,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Model3DViewer(
+                        modelPath: item.path3d!,
+                        itemName: item.name,
+                        fontFamily: fontFamily,
                       ),
-                    ],
+                    );
+                  },
+                  child: Container(
+                    width: 33,
+                    height: 33,
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
+                    child: const Center(
+                      child: Icon(
+                        Icons.view_in_ar,
+                        size: 20,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -499,10 +496,10 @@ class _ItemScreenState extends State<ItemScreen> {
               children: [
                 _isGeneratingOutfits
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
                     : const Icon(Icons.auto_awesome_outlined, size: 18, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
@@ -610,14 +607,14 @@ class _ItemScreenState extends State<ItemScreen> {
     );
   }
 
-  // Builds the "How to Style It" section including title and related items list
+  // Builds the "You may also like" section including title and related items list
   Widget _buildStylingSection(BuildContext context, String fontFamily) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Title (CSS: How to style it)
+        // Section Title (CSS: You may also like)
         Text(
-          "How to style it",
+          "You may also like",
           style: TextStyle(fontFamily: fontFamily, fontSize: 23, fontWeight: FontWeight.w500, letterSpacing: -0.02 * 23, color: Colors.black),
         ),
         const SizedBox(height: 20), // Spacing before related items
@@ -671,9 +668,9 @@ class _ItemScreenState extends State<ItemScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: item.imageUrl != null
-                          ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => 
-                              const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
+                          ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
                           : const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)),
                     ),
                   ),
@@ -817,7 +814,36 @@ class _ItemScreenState extends State<ItemScreen> {
   String _buildImageUrl(String? imageUrl) {
     if (imageUrl == null || imageUrl.isEmpty) return '';
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
-    return 'http://10.0.2.2:8000/static/$imageUrl';
+    return '${Config.baseUrl}/static/$imageUrl';
+  }
+
+  // Function to show 3D model viewer
+  void _show3DModel() {
+    final String? modelPath = widget.item.path3d;
+    if (modelPath == null || modelPath.isEmpty || !modelPath.toLowerCase().endsWith('.glb')) {
+      // No 3D model available for this item
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('3D Model'),
+          content: const Text('3D model not available for this item.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    // Show the 3D model viewer
+    show3DModelViewer(
+      context,
+      modelPath,
+      widget.item.name,
+      'Archivo',
+    );
   }
 
 } // End _ItemScreenState
