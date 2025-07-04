@@ -21,10 +21,21 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  bool _isValidEmail(String email) {
+    // General email validation regex
+    final regex = RegExp(r'^\S+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return regex.hasMatch(email);
+  }
+
   Future<void> _login() async {
     // Validate inputs
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       showThemedSnackBar(context, 'Please enter both email and password', type: 'critical');
+      return;
+    }
+    final email = _emailController.text.trim();
+    if (!_isValidEmail(email)) {
+      showThemedSnackBar(context, 'Please enter a valid email address.', type: 'critical');
       return;
     }
 
@@ -38,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final response = await http.post(
         url,
         body: {
-          'username': _emailController.text.trim(),
+          'username': email,
           'password': _passwordController.text.trim(),
         },
       );
@@ -66,12 +77,8 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        // Handle error
-        String errorMessage = 'Login failed';
-        if (responseData.containsKey('detail')) {
-          errorMessage = responseData['detail'];
-        }
-        showThemedSnackBar(context, errorMessage, type: 'critical');
+        // Always show 'Wrong credentials' for valid email format
+        showThemedSnackBar(context, 'Wrong credentials', type: 'critical');
       }
     } catch (e) {
       showThemedSnackBar(context, 'Error: $e', type: 'critical');
@@ -147,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _emailController,
                           decoration: InputDecoration(
-                            hintText: "your.email@example.com",
+                            hintText: "email@example.com",
                             hintStyle: TextStyle(color: Colors.black.withOpacity(0.5), fontFamily: fontFamily),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,

@@ -33,10 +33,12 @@ class AppConstants {
 void showThemedSnackBar(BuildContext context, String message, {String type = 'normal'}) {
   Color backgroundColor;
   Icon? icon;
+  TextStyle textStyle = const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: 'Archivo');
   switch (type) {
     case 'critical':
       backgroundColor = Colors.red;
-      icon = const Icon(Icons.error, color: Colors.white, size: 24);
+      icon = const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24);
+      textStyle = textStyle.copyWith(fontWeight: FontWeight.bold);
       break;
     case 'success':
       backgroundColor = Colors.green;
@@ -58,8 +60,10 @@ void showThemedSnackBar(BuildContext context, String message, {String type = 'no
           Flexible(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: 'Archivo'),
+              style: textStyle,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

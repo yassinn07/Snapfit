@@ -881,13 +881,6 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                 ],
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(fontFamily: fontFamily, color: Colors.grey.shade600),
-                  ),
-                ),
                 ElevatedButton(
                   onPressed: () async {
                     Navigator.of(context).pop();
@@ -900,6 +893,13 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                   child: Text(
                     "Save",
                     style: TextStyle(fontFamily: fontFamily, color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(fontFamily: fontFamily, color: Colors.grey.shade600),
                   ),
                 ),
               ],

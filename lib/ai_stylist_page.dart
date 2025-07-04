@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'ai_stylist_camera_screen.dart';
+import 'dart:async'; // Added for Timer
 
 class AIStylistPage extends StatefulWidget {
   final int userId;
@@ -15,19 +16,63 @@ class AIStylistPage extends StatefulWidget {
 
 class _AIStylistPageState extends State<AIStylistPage> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<Map<String, String>> chatHistory = [];
   bool _isLoading = false;
+  String _animatedBotText = '';
+  bool _isAnimating = false;
+  String _loadingDots = '.';
+  Timer? _loadingTimer;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    _loadingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _startLoadingDots() {
+    _loadingDots = '.';
+    _loadingTimer?.cancel();
+    _loadingTimer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
+      setState(() {
+        if (_loadingDots.length == 3) {
+          _loadingDots = '.';
+        } else {
+          _loadingDots += '.';
+        }
+      });
+      _scrollToBottom();
+    });
+  }
+
+  void _stopLoadingDots() {
+    _loadingTimer?.cancel();
+    _loadingDots = '.';
   }
 
   Future<void> sendMessage(String message) async {
     setState(() {
       chatHistory.add({'role': 'user', 'text': message});
       _isLoading = true;
+      _animatedBotText = '';
+      _isAnimating = false;
     });
+    _scrollToBottom();
+    _startLoadingDots();
 
     try {
       final response = await http.post(
@@ -35,29 +80,56 @@ class _AIStylistPageState extends State<AIStylistPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'query': message,
-          'user_id': widget.userId.toString(), // Ensure user_id is sent as a string
+          'user_id': widget.userId.toString(),
         }),
       );
+
+      _stopLoadingDots();
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final botReply = data['answer'];
+        await _animateBotReply(botReply);
         setState(() {
           chatHistory.add({'role': 'bot', 'text': botReply});
           _isLoading = false;
+          _animatedBotText = '';
+          _isAnimating = false;
         });
+        _scrollToBottom();
       } else {
         throw Exception('Failed to get response');
       }
     } catch (e) {
+      _stopLoadingDots();
       setState(() {
         chatHistory.add({
           'role': 'bot',
           'text': 'Sorry, something went wrong. Please try again.'
         });
         _isLoading = false;
+        _animatedBotText = '';
+        _isAnimating = false;
       });
+      _scrollToBottom();
     }
+  }
+
+  Future<void> _animateBotReply(String reply) async {
+    setState(() {
+      _animatedBotText = '';
+      _isAnimating = true;
+    });
+    for (int i = 0; i < reply.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 18));
+      setState(() {
+        _animatedBotText = reply.substring(0, i + 1);
+      });
+      _scrollToBottom();
+    }
+    setState(() {
+      _isAnimating = false;
+    });
   }
 
   @override
@@ -100,20 +172,13 @@ class _AIStylistPageState extends State<AIStylistPage> {
               children: [
                 Expanded(
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                     reverse: false,
-                    itemCount: chatHistory.length + (_isLoading ? 1 : 0),
+                    itemCount: chatHistory.length + ((_isLoading || _isAnimating) ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (_isLoading && index == chatHistory.length) {
-                        return Row(
-                          children: [
-                            CircleAvatar(child: Icon(Icons.smart_toy, color: Color(0xFFD55F5F)), backgroundColor: Colors.white),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: CircularProgressIndicator(),
-                            ),
-                          ],
-                        );
+                      if ((_isLoading || _isAnimating) && index == chatHistory.length) {
+                        return _buildAnimatedBotMessage(_animatedBotText, defaultFontFamily);
                       }
                       return _buildMessage(chatHistory[index], defaultFontFamily);
                     },
@@ -227,6 +292,66 @@ class _AIStylistPageState extends State<AIStylistPage> {
             fontFamily: fontFamily,
             fontSize: 16,
             color: isUser ? Colors.white : Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBotMessage(String text, String fontFamily) {
+    if (_isLoading && !_isAnimating) {
+      // Show animated dots while waiting for LLM response
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Text(
+            _loadingDots,
+            style: TextStyle(
+              fontFamily: fontFamily,
+              fontSize: 22,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+      );
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 16,
+            color: Colors.black,
           ),
         ),
       ),

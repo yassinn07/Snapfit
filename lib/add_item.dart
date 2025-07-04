@@ -133,11 +133,11 @@ class _AddItemPageState extends State<AddItemPage> {
         });
         return true;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image.')));
+        showThemedSnackBar(context, 'Image upload failed.', type: 'critical');
         return false;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error uploading image: $e')));
+      showThemedSnackBar(context, 'Image upload error.', type: 'critical');
       return false;
     } finally {
       setState(() { _isLoading = false; });
@@ -146,7 +146,7 @@ class _AddItemPageState extends State<AddItemPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _imageFile == null || _category == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields and select an image.')));
+      showThemedSnackBar(context, 'Fill all fields & add image.', type: 'critical');
       return;
     }
     setState(() { _isLoading = true; });
@@ -168,13 +168,13 @@ class _AddItemPageState extends State<AddItemPage> {
       );
 
       if (newItem != null) {
-        showThemedSnackBar(context, 'Item added successfully!', type: 'success');
+        showThemedSnackBar(context, 'Item added!', type: 'success');
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add item.')));
+        showThemedSnackBar(context, 'Add item failed.', type: 'critical');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding item: $e')));
+      showThemedSnackBar(context, 'Add item error.', type: 'critical');
     } finally {
       setState(() { _isLoading = false; });
     }

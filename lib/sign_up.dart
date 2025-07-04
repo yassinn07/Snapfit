@@ -25,6 +25,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final List<String> _genders = ['Male', 'Female'];
   final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
+  Future<bool> _isUsernameTaken(String username) async {
+    final url = '${Config.baseUrl}/users/check-username/$username';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['exists'] == true;
+      }
+    } catch (e) {}
+    return false; // Assume not taken if error
+  }
+
+  bool _isValidPassword(String password) {
+    // At least 8 chars, at least one letter and one number
+    final regex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$');
+    return regex.hasMatch(password);
+  }
+
+  bool _isValidEmail(String email) {
+    // General email validation regex
+    final regex = RegExp(r'^\S+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return regex.hasMatch(email);
+  }
+
   Future<void> _signUp() async {
     final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
@@ -32,6 +56,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (username.isEmpty || email.isEmpty || password.isEmpty) {
       showThemedSnackBar(context, 'Please fill all required fields: Username, Email, and Password.', type: 'critical');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      showThemedSnackBar(context, 'Please enter a valid email address.', type: 'critical');
+      return;
+    }
+
+    if (!_isValidPassword(password)) {
+      showThemedSnackBar(context, 'Password: 8+ chars, letters & numbers.', type: 'critical');
+      return;
+    }
+
+    if (await _isUsernameTaken(username)) {
+      showThemedSnackBar(context, 'Username is already taken. Please choose another.', type: 'critical');
       return;
     }
 
