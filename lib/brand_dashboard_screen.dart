@@ -5,8 +5,9 @@ class BrandDashboardScreen extends StatelessWidget {
   final int totalClicks;
   final int totalVisits;
   final int totalRecommended;
+  final int totalLikedRecommendation;
 
-  const BrandDashboardScreen({Key? key, required this.totalClicks, required this.totalVisits, required this.totalRecommended}) : super(key: key);
+  const BrandDashboardScreen({Key? key, required this.totalClicks, required this.totalVisits, required this.totalRecommended, required this.totalLikedRecommendation}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +46,12 @@ class BrandDashboardScreen extends StatelessWidget {
               title: 'Recommended',
               value: totalRecommended,
               chart: _buildSingleValueLineChart(totalRecommended, color: Colors.green),
+            ),
+            const SizedBox(height: 24),
+            _buildChartCard(
+              title: 'Liked the Recommendation',
+              value: totalLikedRecommendation,
+              chart: _buildSingleValueBarChart(totalLikedRecommendation, color: Colors.orange),
             ),
           ],
         ),

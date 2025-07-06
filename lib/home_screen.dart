@@ -384,8 +384,8 @@ class _HomePageState extends State<HomePage> {
     try {
       final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
       if (homeScreenState != null) {
-        final profileService = ProfileService(token: homeScreenState.widget.token!);
-        final success = await profileService.toggleFavorite(outfitId);
+        final outfitService = OutfitService(token: homeScreenState.widget.token!);
+        final success = await outfitService.toggleOutfitFavorite(outfitId);
 
         if (success && mounted) {
           setState(() {

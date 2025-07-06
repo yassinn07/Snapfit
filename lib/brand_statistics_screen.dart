@@ -216,6 +216,14 @@ class _BrandStatisticsScreenState extends State<BrandStatisticsScreen> {
                                     Text('Recommended: ${item['recommended'] ?? 0}'),
                                   ],
                                 ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.favorite, size: 18, color: Colors.red),
+                                    const SizedBox(width: 4),
+                                    Text('Liked Recommendation: ${item['liked_recommendation'] ?? 0}'),
+                                  ],
+                                ),
                               ],
                             ),
                           ),

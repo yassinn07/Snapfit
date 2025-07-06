@@ -545,7 +545,7 @@ class _AddItemPageState extends State<AddItemPage> {
                     items: _categories
                         .map((category) => DropdownMenuItem(
                       value: category,
-                      child: Text(category, style: const TextStyle(fontFamily: fontFamily)),
+                      child: Text(category, style: const TextStyle(fontFamily: fontFamily, color: Colors.black)),
                     ))
                         .toList(),
                     onChanged: (val) {
@@ -557,15 +557,15 @@ class _AddItemPageState extends State<AddItemPage> {
                     },
                     decoration: const InputDecoration(
                       labelText: 'Category',
-                      prefixIcon: Icon(Icons.category, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.category, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
                     validator: (value) => value == null ? 'Please select a category' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    style: const TextStyle(fontFamily: fontFamily, color: Colors.black),
                     dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
+                    iconEnabledColor: Colors.black,
                   ),
                   const SizedBox(height: 18),
 
@@ -574,8 +574,8 @@ class _AddItemPageState extends State<AddItemPage> {
                     style: const TextStyle(fontFamily: fontFamily),
                     decoration: const InputDecoration(
                       labelText: 'Name/Description',
-                      prefixIcon: Icon(Icons.label_outline, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.label_outline, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
@@ -587,21 +587,21 @@ class _AddItemPageState extends State<AddItemPage> {
                     items: (_category != null ? (_subcategories[_category] ?? <String>[]) : <String>[])
                         .map<DropdownMenuItem<String>>((sub) => DropdownMenuItem<String>(
                       value: sub,
-                      child: Text(sub, style: const TextStyle(fontFamily: fontFamily)),
+                      child: Text(sub, style: const TextStyle(fontFamily: fontFamily, color: Colors.black)),
                     ))
                         .toList(),
                     onChanged: (val) => setState(() => _subcategory = val),
                     decoration: const InputDecoration(
                       labelText: 'Subcategory',
-                      prefixIcon: Icon(Icons.category_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.category_outlined, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
                     validator: (value) => value == null ? 'Please select a subcategory' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    style: const TextStyle(fontFamily: fontFamily, color: Colors.black),
                     dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
+                    iconEnabledColor: Colors.black,
                   ),
                   const SizedBox(height: 18),
                   TextFormField(
@@ -609,8 +609,8 @@ class _AddItemPageState extends State<AddItemPage> {
                     style: const TextStyle(fontFamily: fontFamily),
                     decoration: const InputDecoration(
                       labelText: 'Color',
-                      prefixIcon: Icon(Icons.color_lens_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.color_lens_outlined, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
@@ -619,7 +619,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
                     value: _sizeController.text.isNotEmpty ? _sizeController.text : null,
-                    items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily)))).toList(),
+                    items: _sizes.map((size) => DropdownMenuItem(value: size, child: Text(size, style: const TextStyle(fontFamily: fontFamily, color: Colors.black)))).toList(),
                     onChanged: (val) {
                       setState(() {
                         _sizeController.text = val ?? '';
@@ -627,15 +627,15 @@ class _AddItemPageState extends State<AddItemPage> {
                     },
                     decoration: const InputDecoration(
                       labelText: 'Size',
-                      prefixIcon: Icon(Icons.straighten, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.straighten, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
                     validator: (value) => value == null || value.isEmpty ? 'Please select a size' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    style: const TextStyle(fontFamily: fontFamily, color: Colors.black),
                     dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
+                    iconEnabledColor: Colors.black,
                   ),
                   const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
@@ -643,7 +643,7 @@ class _AddItemPageState extends State<AddItemPage> {
                     items: _occasionOptions
                         .map((option) => DropdownMenuItem(
                       value: option,
-                      child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                      child: Text(option, style: const TextStyle(fontFamily: fontFamily, color: Colors.black)),
                     ))
                         .toList(),
                     onChanged: (val) {
@@ -654,15 +654,15 @@ class _AddItemPageState extends State<AddItemPage> {
                     },
                     decoration: const InputDecoration(
                       labelText: 'Occasion',
-                      prefixIcon: Icon(Icons.event_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.event_outlined, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
                     validator: (value) => value == null || value.isEmpty ? 'Please select an occasion' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    style: const TextStyle(fontFamily: fontFamily, color: Colors.black),
                     dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
+                    iconEnabledColor: Colors.black,
                   ),
                   const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
@@ -670,7 +670,7 @@ class _AddItemPageState extends State<AddItemPage> {
                     items: _seasonOptions
                         .map((option) => DropdownMenuItem(
                       value: option,
-                      child: Text(option, style: const TextStyle(fontFamily: fontFamily)),
+                      child: Text(option, style: const TextStyle(fontFamily: fontFamily, color: Colors.black)),
                     ))
                         .toList(),
                     onChanged: (val) {
@@ -680,15 +680,15 @@ class _AddItemPageState extends State<AddItemPage> {
                     },
                     decoration: const InputDecoration(
                       labelText: 'Season',
-                      prefixIcon: Icon(Icons.wb_sunny_outlined, color: mainRed),
-                      labelStyle: TextStyle(color: mainRed, fontFamily: fontFamily),
+                      prefixIcon: Icon(Icons.wb_sunny_outlined, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.black, fontFamily: fontFamily),
                       border: themedBorder,
                       focusedBorder: themedBorder,
                     ),
                     validator: (value) => value == null || value.isEmpty ? 'Please select a season' : null,
-                    style: const TextStyle(fontFamily: fontFamily, color: mainRed),
+                    style: const TextStyle(fontFamily: fontFamily, color: Colors.black),
                     dropdownColor: Colors.white,
-                    iconEnabledColor: mainRed,
+                    iconEnabledColor: Colors.black,
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(

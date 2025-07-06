@@ -54,6 +54,22 @@ class OutfitService {
         },
       );
       
+      if (response.statusCode == 200) {
+        // If the outfit was successfully favorited, also log the brand tracking event
+        try {
+          await http.post(
+            Uri.parse('$baseUrl/brands/outfit_favorite_event?outfit_id=$outfitId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          );
+        } catch (e) {
+          // Don't fail the main operation if brand tracking fails
+          print('Warning: Failed to log brand tracking event: $e');
+        }
+      }
+      
       return response.statusCode == 200;
     } catch (e) {
       print('Exception when toggling favorite: $e');

@@ -664,6 +664,7 @@ class _MyOutfitsPageState extends State<MyOutfitsPage> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD55F5F),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         textStyle: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold),
                       ),

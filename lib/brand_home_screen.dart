@@ -231,10 +231,12 @@ class _BrandHomeScreenState extends State<BrandHomeScreen> {
     int totalClicks = 0;
     int totalVisits = 0;
     int totalRecommended = 0;
+    int totalLikedRecommendation = 0;
     for (final item in _items) {
       totalClicks += (item['users_clicked'] ?? 0) as int;
       totalVisits += (item['visit_store'] ?? 0) as int;
       totalRecommended += (item['recommended'] ?? 0) as int;
+      totalLikedRecommendation += (item['liked_recommendation'] ?? 0) as int;
     }
 
     final pages = [
@@ -242,6 +244,7 @@ class _BrandHomeScreenState extends State<BrandHomeScreen> {
         totalClicks: totalClicks,
         totalVisits: totalVisits,
         totalRecommended: totalRecommended,
+        totalLikedRecommendation: totalLikedRecommendation,
       ),
       BrandStatisticsScreen(token: widget.token, items: _items),
       ProfilePage(
