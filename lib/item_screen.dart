@@ -19,6 +19,28 @@ import 'constants.dart' show showThemedSnackBar;
 // TODO: Replace with your actual data structure if different
 typedef RelatedItem = ShopItem;
 
+// Local extension to access similarity if present in the backend response
+extension ShopItemSimilarity on ShopItem {
+  double? get similarity {
+    try {
+      // If the backend includes a similarity field, it will be in the original JSON map
+      // This works if ShopItem.fromJson stores the original map as a property (not standard)
+      // Otherwise, try to parse from price or description if overloaded, or always return null
+      // For now, try to parse from description if it looks like a percentage
+      if (description.isNotEmpty && description.contains('similarity:')) {
+        final match = RegExp(r'similarity:([0-9.]+)').firstMatch(description);
+        if (match != null) {
+          return double.tryParse(match.group(1) ?? '') ?? null;
+        }
+      }
+      // If you want to parse from another field, add logic here
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 class ItemScreen extends StatefulWidget {
   final ShopItem item;
   final String? token;
@@ -104,137 +126,71 @@ class _ItemScreenState extends State<ItemScreen> {
       _isGeneratingOutfits = true;
     });
     try {
-      // Step 1: Fetch closet items for the user
-      final closetService = ClosetService(token: widget.token ?? '');
-      final closetItems = await closetService.getClosetItems();
-      final String userGender = widget.item.gender?.toLowerCase() ?? 'male';
-
-      print('DEBUG: Found ${closetItems.length} closet items');
-      print('DEBUG: Current item category: ${widget.item.category}, subcategory: ${widget.item.subcategory}');
-      print('DEBUG: User gender: $userGender');
-
-      // Step 2: Convert ClosetItem to ShopItem for compatibility
-      List<ShopItem> closetShopItems = closetItems.map((closetItem) => ShopItem(
-        id: closetItem.id,
-        name: closetItem.name,
-        description: '',
-        category: closetItem.category,
-        userName: closetItem.brand,
-        price: '',
-        imageUrl: closetItem.imageUrl,
-        isFavorite: false,
-        purchaseLink: null,
-        color: closetItem.color,
-        size: closetItem.size,
-        occasion: closetItem.occasion,
-        gender: closetItem.gender,
-        subcategory: closetItem.subcategory,
-        brand: closetItem.brand,
-        source: 'closet',
-      )).toList();
-
-      // Debug: Print all closet item categories
-      for (var item in closetShopItems) {
-        print('DEBUG: Closet item - ID: ${item.id}, Category: ${item.category}, Subcategory: ${item.subcategory}, Gender: ${item.gender}');
-      }
-
-      // Step 3: Select outfit items from closet (excluding the current item)
-      // Helper to check if two items are the same (by id and source)
-      bool isSameItem(ShopItem a, ShopItem b) => a.id == b.id && (a.source ?? '') == (b.source ?? '');
-
-      // Determine the category of the current item
-      final String itemCat = widget.item.category.toLowerCase();
-      final String itemSubcat = widget.item.subcategory.toLowerCase();
-
-      // Helper to find a closet item by category, not the current item
-      ShopItem? findClosetItem(List<String> categories) {
-        for (final item in closetShopItems) {
-          final itemCategory = item.category.toLowerCase();
-          final itemSubcategory = item.subcategory.toLowerCase();
-          final itemGender = item.gender.toLowerCase();
-
-          bool categoryMatches = categories.any((cat) =>
-          itemCategory.contains(cat) || itemSubcategory.contains(cat));
-          bool notSameItem = !isSameItem(item, widget.item);
-          bool genderMatches = itemGender.isEmpty || itemGender == userGender || itemGender == 'unisex';
-
-          if (categoryMatches && notSameItem && genderMatches) {
-            print('DEBUG: Found matching item - ID: ${item.id}, Category: ${item.category}, Gender: ${item.gender}');
-            return item;
+      // Call backend for similarity-based outfit generation
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}/ai/recommend-outfit-by-item-id'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'item_id': int.parse(widget.item.id),
+          'user_id': widget.userId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final recs = data['recommendations'] as Map<String, dynamic>;
+        List<ShopItem> outfitItems = [widget.item.copyWith(source: 'shop', imageUrl: widget.item.imageUrl)];
+        print('DEBUG: AI outfit details:');
+        for (var cat in ['top', 'bottom', 'shoes']) {
+          final closetRec = recs[cat]?['closet'];
+          if (closetRec != null) {
+            outfitItems.add(ShopItem.fromJson(closetRec));
+            print('  Category: $cat');
+            print('    Name: ${closetRec['name']}');
+            print('    Score: ${(closetRec['score'] as num?)?.toStringAsFixed(4) ?? 'N/A'}');
+            print('    Visual Similarity: ${(closetRec['visual_similarity'] as num?)?.toStringAsFixed(4) ?? 'N/A'}');
+            print('    Metadata Score: ${(closetRec['metadata_score'] as num?)?.toStringAsFixed(4) ?? 'N/A'}');
+          } else {
+            print('  Category: $cat - No closet recommendation');
           }
         }
-        print('DEBUG: No matching item found for categories: $categories');
-        return null;
-      }
-
-      // Build the outfit: always include the current item, then fill in the rest from closet
-      List<ShopItem> outfitItems = [widget.item.copyWith(source: 'shop', imageUrl: widget.item.imageUrl)];
-
-      // If current item is a top, find bottom and shoes
-      if (itemCat.contains('top') || itemSubcat.contains('top') || itemCat.contains('shirt') || itemSubcat.contains('shirt') ||
-          itemCat.contains('upper body') || itemSubcat.contains('upper body')) {
-        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
-        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
-        if (bottom != null) outfitItems.add(bottom);
-        if (shoes != null) outfitItems.add(shoes);
-      } else if (itemCat.contains('bottom') || itemSubcat.contains('bottom') || itemCat.contains('pant') || itemSubcat.contains('pant') ||
-          itemCat.contains('skirt') || itemSubcat.contains('skirt') || itemCat.contains('lower body') || itemSubcat.contains('lower body')) {
-        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
-        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
-        if (top != null) outfitItems.add(top);
-        if (shoes != null) outfitItems.add(shoes);
-      } else if (itemCat.contains('shoe') || itemSubcat.contains('shoe') || itemCat.contains('footwear') || itemSubcat.contains('footwear')) {
-        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
-        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
-        if (top != null) outfitItems.add(top);
-        if (bottom != null) outfitItems.add(bottom);
-      } else {
-        // Fallback: try to find top, bottom, shoes
-        final top = findClosetItem(['top', 'shirt', 'jacket', 'sweater', 'tshirt', 'upper body']);
-        final bottom = findClosetItem(['bottom', 'pant', 'jean', 'skirt', 'trouser', 'short', 'lower body']);
-        final shoes = findClosetItem(['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'flat', 'heel', 'footwear']);
-        if (top != null) outfitItems.add(top);
-        if (bottom != null) outfitItems.add(bottom);
-        if (shoes != null) outfitItems.add(shoes);
-      }
-
-      print('DEBUG: Final outfit has ${outfitItems.length} items');
-
-      setState(() {
-        _isGeneratingOutfits = false;
-      });
-
-      // More flexible check: allow partial outfits (at least 2 items total)
-      if (outfitItems.length < 2) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Outfit Generation'),
-            content: const Text('Not enough items in your closet to generate an outfit. Please add more items to your closet.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
+        print('DEBUG: AI outfit items: ${outfitItems.map((i) => i.name).toList()}');
+        setState(() {
+          _isGeneratingOutfits = false;
+        });
+        if (outfitItems.length < 2) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Outfit Generation'),
+              content: const Text('Not enough items in your closet to generate an outfit. Please add more items to your closet.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OutfitGenerationScreen(
+              outfitItems: outfitItems,
+              userId: widget.userId,
+              processedImageUrl: widget.item.imageUrl,
+              token: widget.token,
+              originalImagePath: widget.item.imageUrl,
+            ),
           ),
         );
         return;
+      } else {
+        setState(() { _isGeneratingOutfits = false; });
+        showThemedSnackBar(context, 'AI outfit generation failed: ${response.body}', type: 'critical');
+        return;
       }
-
-      // Step 4: Navigate to OutfitGenerationScreen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OutfitGenerationScreen(
-            outfitItems: outfitItems,
-            userId: widget.userId,
-            processedImageUrl: widget.item.imageUrl,
-            token: widget.token,
-            originalImagePath: widget.item.imageUrl,
-          ),
-        ),
-      );
     } catch (e) {
       setState(() {
         _isGeneratingOutfits = false;
@@ -645,84 +601,96 @@ class _ItemScreenState extends State<ItemScreen> {
 
   // Builds a single card for the related items list
   Widget _buildRelatedItemCard(BuildContext context, RelatedItem item, String fontFamily) {
-    // Reusing structure similar to _buildShopItemCard but maybe smaller/simpler
-    // CSS suggests card width around 200-230px (Rect 104/105)
-    return SizedBox(
-      width: 180, // Slightly smaller than grid view items
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Item Card with Image and Overlays (CSS: Rect 106/107)
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F3F3), // CSS background: #F3F3F3;
-                borderRadius: BorderRadius.circular(10), // CSS border-radius: 10px;
-                // CSS: Rect 104/105 imply a shadow, add if needed
-                // boxShadow: [BoxShadow(blurRadius: 4, color: Colors.black.withOpacity(0.25), offset: Offset(0, 4))],
-              ),
-              child: Stack(
-                children: [
-                  // Image Placeholder (CSS: image-removebg-preview (4) 2, (6) 2 etc)
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: item.imageUrl != null
-                          ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                          const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
-                          : const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ItemScreen(
+              item: item,
+              token: widget.token,
+              userId: widget.userId,
+            ),
+          ),
+        );
+      },
+      child: SizedBox(
+        width: 180,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Item Card with Image and Overlays (CSS: Rect 106/107)
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F3F3), // CSS background: #F3F3F3;
+                  borderRadius: BorderRadius.circular(10), // CSS border-radius: 10px;
+                  // CSS: Rect 104/105 imply a shadow, add if needed
+                  // boxShadow: [BoxShadow(blurRadius: 4, color: Colors.black.withOpacity(0.25), offset: Offset(0, 4))],
+                ),
+                child: Stack(
+                  children: [
+                    // Image Placeholder (CSS: image-removebg-preview (4) 2, (6) 2 etc)
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: item.imageUrl != null
+                            ? Image.network(_buildImageUrl(item.imageUrl), fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                            const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)))
+                            : const Center(child: Icon(Icons.image_not_supported_outlined, size: 40, color: Colors.grey)),
+                      ),
                     ),
+                    // Overlay Buttons (CSS: Ellipse 197-200, disable-heart etc.)
+                    Positioned(top: 6, left: 6, // Approx CSS pos
+                        child: _buildItemOverlayButton(
+                            size: 28, // Slightly smaller?
+                            iconSize: 17,
+                            icon: item.isFavorite ? Icons.favorite : Icons.favorite_border, // Assuming related items can also be favorited
+                            iconColor: item.isFavorite ? Colors.red : Colors.black.withOpacity(0.7),
+                            onTap: () { /* TODO: Handle favorite toggle for related item */ setState(() {item.isFavorite = !item.isFavorite;});}
+                        )
+                    ),
+                    Positioned(bottom: 6, right: 6, // Approx CSS pos (Ellipse 201, reload icon)
+                        child: _buildItemOverlayButton(
+                            size: 28,
+                            iconSize: 16,
+                            icon: Icons.shopping_bag_outlined, // Placeholder - CSS shows reload icon? Maybe "Add this instead"?
+                            onTap: () { /* TODO: Handle add related item to bag */ }
+                        )
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Text Details Below Card
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0, left: 4.0, right: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text( // Category
+                    item.category,
+                    style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black.withOpacity(0.65), letterSpacing: -0.02*12),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
-                  // Overlay Buttons (CSS: Ellipse 197-200, disable-heart etc.)
-                  Positioned(top: 6, left: 6, // Approx CSS pos
-                      child: _buildItemOverlayButton(
-                          size: 28, // Slightly smaller?
-                          iconSize: 17,
-                          icon: item.isFavorite ? Icons.favorite : Icons.favorite_border, // Assuming related items can also be favorited
-                          iconColor: item.isFavorite ? Colors.red : Colors.black.withOpacity(0.7),
-                          onTap: () { /* TODO: Handle favorite toggle for related item */ setState(() {item.isFavorite = !item.isFavorite;});}
-                      )
+                  const SizedBox(height: 2),
+                  Text( // Name | Brand
+                    "${item.name} | ${item.userName}",
+                    style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02*12),
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
                   ),
-                  Positioned(bottom: 6, right: 6, // Approx CSS pos (Ellipse 201, reload icon)
-                      child: _buildItemOverlayButton(
-                          size: 28,
-                          iconSize: 16,
-                          icon: Icons.shopping_bag_outlined, // Placeholder - CSS shows reload icon? Maybe "Add this instead"?
-                          onTap: () { /* TODO: Handle add related item to bag */ }
-                      )
+                  const SizedBox(height: 4),
+                  Text( // Price
+                    item.price,
+                    style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black.withOpacity(0.65), letterSpacing: -0.02*12),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-            ),
-          ),
-          // Text Details Below Card
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0, left: 4.0, right: 4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text( // Category
-                  item.category,
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black.withOpacity(0.65), letterSpacing: -0.02*12),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text( // Name | Brand
-                  "${item.name} | ${item.userName}",
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black, letterSpacing: -0.02*12),
-                  maxLines: 2, overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text( // Price
-                  item.price,
-                  style: TextStyle(fontFamily: fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: Colors.black.withOpacity(0.65), letterSpacing: -0.02*12),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          )
-        ],
+            )
+          ],
+        ),
       ),
     );
   }
